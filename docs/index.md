@@ -23,18 +23,19 @@ resources.
 
 ## Installation
 
-This plugin will enventually become available for installation via the main QGIS plugin repository, but for now
-you can install it via our custom plugin repository, as mentioned in the callout below.
+This plugin will eventually become available for installation via the main QGIS plugin repository, but for now
+you can install it via our development instructions, as mentioned in the [development section](development.md). 
+As early versions are released, you will also be able to install from our custom plugin repository, as mentioned in 
+the callout below.
 
 ??? info "Extra - Installing from our custom plugin repo"
 
-    For now this plugin is only available for install from our own custom plugin repo. 
-
-    It is available at:
+    A custom plugin repo is available at:
     
     <https://byteroad.github.io/qgis-oacs-plugin/repo/plugins.xml>
-    
+
     1. Add this custom repository inside QGIS Plugin Manager
+    1. Allow experimental plugins
     1. Refresh the list of available plugins
     1. Search for a plugin named **OACS**
     1. Install it!

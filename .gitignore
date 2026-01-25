@@ -4,7 +4,7 @@
 */*.egg-info
 
 # mkdocs documentation
-/site
+site
 
 # pycharm project
 .idea

@@ -38,7 +38,7 @@ class GithubRelease:
 @app.callback()
 def main(ctx: typer.Context, verbose: bool = False, qgis_profile: str = "default"):
     """Perform various development-oriented tasks for this plugin"""
-    logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
+    logging.basicConfig(level=logging.INFO if verbose else logging.WARNING)
     ctx_obj = ctx.ensure_object(dict)
     ctx_obj.update({
         "qgis_profile": qgis_profile,
@@ -106,7 +106,7 @@ def copy_icon(
 ) -> Path | None:
     metadata = _get_metadata()
     icon_path = LOCAL_ROOT_DIR / RESOURCE_DIR_NAME / metadata["icon"]
-    logger.debug(f"{icon_path=}")
+    logger.info(f"{icon_path=}")
     if icon_path.is_file():
         target_path = output_dir / icon_path.name
         target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -144,7 +144,7 @@ def compile_resources(
     resources_path = LOCAL_ROOT_DIR / RESOURCE_DIR_NAME / "resources.qrc"
     target_path = output_dir / "resources.py"
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    logger.debug(f"compile_resources target_path: {target_path}")
+    logger.info(f"compile_resources target_path: {target_path}")
     subprocess.run(shlex.split(f"pyrcc5 -o {target_path} {resources_path}"))
 
 
@@ -154,10 +154,10 @@ def generate_metadata(
     output_dir: typing.Optional[Path] = LOCAL_ROOT_DIR / "build/temp",
 ):
     metadata = _get_metadata()
-    logger.debug(f"metadata: {json.dumps(metadata, indent=2)}")
+    logger.info(f"metadata: {json.dumps(metadata, indent=2)}")
     target_path = output_dir / "metadata.txt"
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    logger.debug(f"generate_metadata target_path: {target_path}")
+    logger.info(f"generate_metadata target_path: {target_path}")
     config = configparser.ConfigParser()
     # do not modify case of parameters, as per
     # https://docs.python.org/3/library/configparser.html#customizing-parser-behaviour
@@ -181,11 +181,11 @@ def install_qgis_into_venv(
         "QGIS_PROCESSING_PLUGIN_DIR_PATH", "/usr/share/qgis/python/plugins/processing")
 ):
     venv_dir = _get_virtualenv_site_packages_dir()
-    logger.debug(f"venv_dir: {venv_dir}")
-    logger.debug(f"pyqt5_dir: {pyqt5_dir}")
+    logger.info(f"venv_dir: {venv_dir}")
+    logger.info(f"pyqt5_dir: {pyqt5_dir}")
     # print(f"sip_dir: {sip_dir}")
-    logger.debug(f"qgis_dir: {qgis_dir}")
-    logger.debug(f"processing_plugin_dir: {processing_plugin_dir}")
+    logger.info(f"qgis_dir: {qgis_dir}")
+    logger.info(f"processing_plugin_dir: {processing_plugin_dir}")
     suitable, relevant_paths = _check_suitable_system(
         pyqt5_dir,
         # sip_dir,
@@ -262,33 +262,44 @@ def generate_plugin_repo_xml(
             </pyqgis_plugin>
     """.strip()
     contents = "<?xml version = '1.0' encoding = 'UTF-8'?>\n<plugins>"
-    all_releases = _get_existing_releases(context=context)
-    for release in [r for r in _get_latest_releases(all_releases) if r is not None]:
-        tag_name = release.tag_name
-        logger.debug(f"Processing release {tag_name}...")
-        fragment = fragment_template.format(
-            name=metadata.get("name"),
-            version=tag_name.replace("v", ""),
-            description=metadata.get("description"),
-            about=metadata.get("about"),
-            qgis_minimum_version=metadata.get("qgisMinimumVersion"),
-            homepage=metadata.get("homepage"),
-            filename=release.url.rpartition("/")[-1],
-            icon=metadata.get("icon", ""),
-            author=metadata.get("author"),
-            download_url=release.url,
-            update_date=release.published_at,
-            experimental=release.pre_release,
-            deprecated=metadata.get("deprecated"),
-            tracker=metadata.get("tracker"),
-            repository=metadata.get("repository"),
-            tags=metadata.get("tags"),
-        )
-        contents = "\n".join((contents, fragment))
-    contents = "\n".join((contents, "</plugins>"))
-    repo_index = target_dir / "plugins.xml"
-    repo_index.write_text(contents, encoding="utf-8")
-    print(f"Plugin repo XML file saved at {repo_index}")
+    repo_owner_name = metadata["repository"].partition("github.com/")[-1]
+    repo_owner, repo_name = repo_owner_name.split("/")
+    logger.info(f"{repo_owner=}, {repo_name=}")
+    all_releases = _get_existing_releases(
+        repository_name=repo_owner,
+        repository_owner=repo_name,
+        context=context
+    )
+    logger.info(f"{all_releases=}")
+    if len(all_releases) > 0:
+        for release in [r for r in _get_latest_releases(all_releases) if r is not None]:
+            tag_name = release.tag_name
+            logger.info(f"Processing release {tag_name}...")
+            fragment = fragment_template.format(
+                name=metadata.get("name"),
+                version=tag_name.replace("v", ""),
+                description=metadata.get("description"),
+                about=metadata.get("about"),
+                qgis_minimum_version=metadata.get("qgisMinimumVersion"),
+                homepage=metadata.get("homepage"),
+                filename=release.url.rpartition("/")[-1],
+                icon=metadata.get("icon", ""),
+                author=metadata.get("author"),
+                download_url=release.url,
+                update_date=release.published_at,
+                experimental=release.pre_release,
+                deprecated=metadata.get("deprecated"),
+                tracker=metadata.get("tracker"),
+                repository=metadata.get("repository"),
+                tags=metadata.get("tags"),
+            )
+            contents = "\n".join((contents, fragment))
+        contents = "\n".join((contents, "</plugins>"))
+        repo_index = target_dir / "plugins.xml"
+        repo_index.write_text(contents, encoding="utf-8")
+        print(f"Plugin repo XML file saved at {repo_index}")
+    else:
+        print(f"No releases found for {repo_owner}/{repo_name} - plugin repo XML not written")
 
 
 def _check_suitable_system(
@@ -414,11 +425,13 @@ def _get_qgis_root_dir(context: typing.Optional[typer.Context] = None) -> Path:
 
 
 def _get_existing_releases(
+    repository_name: str,
+    repository_owner: str,
     context: typing.Optional = None,
 ) -> typing.List[GithubRelease]:
     """Query the github API and retrieve existing releases"""
     # TODO: add support for pagination
-    base_url = "https://api.github.com/repos/ricardogsilva/qgisconefor/releases"
+    base_url = f"https://api.github.com/repos/{repository_owner}/{repository_name}/releases"
     response = httpx.get(base_url)
     result = []
     if response.status_code == 200:
@@ -430,7 +443,7 @@ def _get_existing_releases(
                     break
             else:
                 zip_download_url = None
-            logger.debug(f"zip_download_url: {zip_download_url}")
+            logger.info(f"zip_download_url: {zip_download_url}")
             if zip_download_url is not None:
                 result.append(
                     GithubRelease(
