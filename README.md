@@ -1,43 +1,19 @@
-QGIS OACS Plugin
+# QGIS OACS Plugin
 
 
-## Development
+## Development, installation and usage
 
-> ![warning]
-> 
-> This plugin is being developed on an ubuntu 24.04 machine. These instructions are not guaranteed to work 
-> on a different system. Moreover, they will very likely fail on a Windows system
+Check out the docs at:
 
-1. Install [QGIS](https://qgis.org/). Be sure to get at the minimum version 3.44;
+https://byteroad.github.io/qgis-oacs-plugin/
 
-1. Create a custom QGIS profile for development - This is not strictly necessary but helps with keeping your main 
-   QGIS workspace clean. Use the QGIS GUI for this (Settings -> User Profiles -> New Profile...). For the sake of 
-   these instructions, let's pretend you named your profile `my-profile`.
 
-1. Install the pyqt5 dev tools, in order to gain access to the `pyrcc5` utility:
+### Issues and feature requests
 
-   ```shell
-   sudo apt install pyqt5-dev-tools
-   ```
+Please use the GitHub issue tracker at
 
-1. Install [uv](https://docs.astral.sh/uv/);
+https://github.com/byteroad/qgis-oacs-plugin/issues
 
-1. Clone this repo;
-
-1. Use the provided `plugin-admin` CLI utility to create a virtualenv and get the QGIS Python bindings in it:
-
-   ```shell
-   uv plugin-admin --qgis-profile my-profile install-qgis-into-venv
-   ```
-
-1. Now you can work on the plugin code
-
-1. Install the plugin with:
-
-   ```shell
-   uv plugin-admin --qgis-profile my-profile install
-   ```
-   
 
 ### Demo servers
 

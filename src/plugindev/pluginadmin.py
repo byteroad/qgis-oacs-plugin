@@ -237,9 +237,9 @@ def install_qgis_into_venv(
 @app.command()
 def generate_plugin_repo_xml(
     context: typer.Context,
+    target_dir: Path = LOCAL_ROOT_DIR / "site/repo",
 ):
-    repo_base_dir = LOCAL_ROOT_DIR / "docs" / "repo"
-    repo_base_dir.mkdir(parents=True, exist_ok=True)
+    target_dir.mkdir(parents=True, exist_ok=True)
     metadata = _get_metadata()
     fragment_template = """
             <pyqgis_plugin name="{name}" version="{version}">

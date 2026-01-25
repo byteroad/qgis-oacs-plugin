@@ -1,0 +1,58 @@
+name: Build and publish Documentation
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Grab code"
+        uses: actions/checkout@v4.2.2
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.18"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: "Install code"
+        run: uv sync --frozen
+
+      - name: "Build docs"
+        run: uv run mkdocs build --site-dir built-docs
+
+      - name: "Regenerate plugin repo XML"
+        run: uv run plugin-admin --verbose generate-plugin-repo-xml --target-dir built-docs
+
+      - name: "Upload docs as artifacts"
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: built-docs/
+
+  deploy-docs:
+    if: github.ref == 'refs/heads/main'
+    needs: build-docs
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: deploy docs to github pages
+        id: deployment
+        uses: actions/deploy-pages@v4.0.5
