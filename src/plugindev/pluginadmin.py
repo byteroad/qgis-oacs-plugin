@@ -299,7 +299,13 @@ def generate_plugin_repo_xml(
         repo_index.write_text(contents, encoding="utf-8")
         print(f"Plugin repo XML file saved at {repo_index}")
     else:
-        print(f"No releases found for {repo_owner}/{repo_name} - plugin repo XML not written")
+        logger.warning(
+            f"No releases found for {repo_owner}/{repo_name} - generated plugin repo XML will be empty"
+        )
+    contents = "\n".join((contents, "</plugins>"))
+    repo_index = target_dir / "plugins.xml"
+    repo_index.write_text(contents, encoding="utf-8")
+    print(f"Plugin repo XML file saved at {repo_index}")
 
 
 def _check_suitable_system(
