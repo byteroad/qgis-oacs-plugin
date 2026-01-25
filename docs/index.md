@@ -25,7 +25,8 @@ resources.
 
 This plugin will eventually become available for installation via the main QGIS plugin repository, but for now
 you can install it via our development instructions, as mentioned in the [development section](development.md). 
-As early versions are released, you will also be able to install from our custom plugin repository, as mentioned in 
+
+Once early versions are released, you will also be able to install from our custom plugin repository, as mentioned in 
 the callout below.
 
 ??? info "Extra - Installing from our custom plugin repo"

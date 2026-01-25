@@ -1,3 +1,4 @@
+import qgis.core
 from qgis.gui import (
     QgsGui,
     QgisInterface,
@@ -7,6 +8,7 @@ from .gui.data_source_select_provider import OacsSourceSelectProvider
 
 
 class QgisOacs:
+    source_select_provider: OacsSourceSelectProvider
 
     def __init__(self, iface: QgisInterface) -> None:
         self.source_select_provider = OacsSourceSelectProvider()

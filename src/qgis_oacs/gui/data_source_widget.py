@@ -1,15 +1,28 @@
+import functools
+import uuid
 from pathlib import Path
 
 import qgis.core
 import qgis.gui
-from qgis.PyQt import QtCore
-from qgis.PyQt import QtWidgets
+from qgis.PyQt import (
+    QtCore,
+    QtWidgets,
+)
 from qgis.PyQt.uic import loadUiType
+
+from ..settings import settings_manager
+from .data_source_connection_dialog import DataSourceConnectionDialog
 
 WidgetUi, _ = loadUiType(Path(__file__).parents[1] / "ui/data_source_widget.ui")
 
 
 class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, WidgetUi):
+    connection_list_cmb: QtWidgets.QComboBox
+    connection_new_btn: QtWidgets.QPushButton
+    connection_edit_btn: QtWidgets.QPushButton
+    connection_remove_btn: QtWidgets.QPushButton
+
+    _connection_controls: tuple[QtWidgets.QWidget, ...]
 
     def __init__(
             self,
@@ -19,3 +32,81 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, WidgetUi):
     ):
         super().__init__(parent, fl, widget_mode)
         self.setupUi(self)
+        self._connection_controls = (
+            self.connection_list_cmb,
+            self.connection_new_btn,
+            self.connection_edit_btn,
+            self.connection_remove_btn,
+        )
+        settings_manager.current_data_source_connection_changed.connect(self.toggle_connection_modifier_buttons)
+        add_new_handler = functools.partial(self.spawn_data_source_connection_dialog, add_new=True)
+        self.connection_new_btn.clicked.connect(add_new_handler)
+        self.connection_edit_btn.clicked.connect(self.spawn_data_source_connection_dialog)
+        self.connection_remove_btn.clicked.connect(self.remove_current_data_source_connection)
+        self.connection_list_cmb.activated.connect(self.update_current_data_source_connection)
+        self.update_connections_combobox()
+        self.toggle_connection_modifier_buttons()
+
+    def spawn_data_source_connection_dialog(self, add_new: bool):
+        if add_new:
+            dialog = DataSourceConnectionDialog(parent=self)
+        else:
+            dialog = DataSourceConnectionDialog(
+                parent=self,
+                data_source_connection=settings_manager.get_current_data_source_connection(),
+            )
+        dialog.exec_()
+        self.update_connections_combobox()
+
+    def update_current_data_source_connection(self, index: int) -> None:
+        """Updates the current data source connection in the QGIS settings."""
+        serialized_currently_selected_id = self.connection_list_cmb.itemData(index)
+        settings_manager.set_current_data_source_connection(uuid.UUID(serialized_currently_selected_id))
+
+    def remove_current_data_source_connection(self) -> None:
+        current_data_source_connection = settings_manager.get_current_data_source_connection()
+        if self._spawn_data_source_connection_deletion_dialog(current_data_source_connection.name):
+            # choose a new current connection
+            all_data_source_connections = settings_manager.list_data_source_connections()
+            new_current_connection_id = None
+            for idx, connection in enumerate(all_data_source_connections):
+                if connection.id == current_data_source_connection.id:
+                    try:
+                        new_current_connection_id = all_data_source_connections[idx - 1].id
+                    except IndexError:
+                        try:
+                            new_current_connection_id = all_data_source_connections[idx + 1].id
+                        except IndexError:
+                            pass  # there are no other connections to set as the new current value
+                    break
+            settings_manager.set_current_data_source_connection(new_current_connection_id)
+            settings_manager.delete_data_source_connection(current_data_source_connection.id)
+            self.update_connections_combobox()
+
+    def update_connections_combobox(self) -> None:
+        self.connection_list_cmb.clear()
+        for data_source_connection in settings_manager.list_data_source_connections():
+            self.connection_list_cmb.addItem(data_source_connection.name, str(data_source_connection.id))
+        current_connection = settings_manager.get_current_data_source_connection()
+        if current_connection:
+            index = self.connection_list_cmb.findData(str(current_connection.id))
+            self.connection_list_cmb.setCurrentIndex(index)
+
+    def toggle_connection_modifier_buttons(self) -> None:
+        if settings_manager.get_current_data_source_connection():
+            self.connection_edit_btn.setEnabled(True)
+            self.connection_remove_btn.setEnabled(True)
+        else:
+            self.connection_edit_btn.setEnabled(False)
+            self.connection_remove_btn.setEnabled(False)
+
+    def _spawn_data_source_connection_deletion_dialog(self, connection_name: str):
+        message = f"Remove connection {connection_name!r}?"
+        confirmation = QtWidgets.QMessageBox.warning(
+            self,
+            "QGIS OACS Plugin",
+            message,
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No,
+        )
+        return confirmation == QtWidgets.QMessageBox.Yes
