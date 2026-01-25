@@ -1,0 +1,13 @@
+# python files
+*.pyc
+
+*/*.egg-info
+
+# other files
+*.swp
+*un~
+*~
+
+.idea
+
+build

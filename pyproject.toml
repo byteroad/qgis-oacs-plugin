@@ -1,0 +1,46 @@
+[project]
+name = "qgis-oacs-plugin"
+version = "0.1.0"
+description = "A QGIS plugin for working with OGC API - Connected systems servers"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "httpx>=0.28.1",
+    "typer>=0.21.1",
+]
+authors = [
+    {name = "Ricardo Garcia Silva", email = "ricardo.garcia.silva@gmail.com"}
+]
+maintainers = [
+    {name = "Ricardo Garcia Silva", email = "ricardo.garcia.silva@gmail.com"}
+]
+
+
+[project.scripts]
+plugin-admin = "plugindev.pluginadmin:app"
+
+[tool.uv]
+package = true
+
+[tool.qgis-plugin.metadata]
+name = "QGIS OACS Plugin"
+qgisMinimumVersion = "3.40.0"
+icon = "graph_3.svg"
+experimental = true
+deprecated = false
+homepage = "https://byteroad.github.io/qgis-oacs-plugin"
+tracker = "https://github.com/byteroad/qgis-oacs-plugin/issues"
+repository = "https://github.com/byteroad/qgis-oacs-plugin"
+tags = [
+    "ogc-api",
+    "connected systems",
+]
+category = "plugins"
+hasProcessingProvider = false
+about = """\
+This plugin allows browsing OGC API - Connected Systems endpoints.
+"""
+# changelog: dynamically pulled from the README.md file
+# description: dynamically pulled from the project.description section
+# version: dynamically pulled from the tool.poetry.version section
+# author: dynamically pulled from the tool.poetry.authors section
+# email: dynamically pulled from the tool.poetry.authors section
