@@ -35,7 +35,7 @@ jobs:
         run: uv run mkdocs build --site-dir built-docs
 
       - name: "Regenerate plugin repo XML"
-        run: uv run plugin-admin --verbose generate-plugin-repo-xml https://--target-dir built-docs/repo
+        run: uv run plugin-admin --verbose generate-plugin-repo-xml --target-dir built-docs/repo
 
       - name: "Upload docs as artifacts"
         uses: actions/upload-pages-artifact@v4
