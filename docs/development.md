@@ -5,7 +5,7 @@
 !!! WARNING
     
     This plugin is being developed on an ubuntu 24.04 machine. These instructions are not guaranteed to work
-    on a different system. Moreover, they will very likely fail on a Windows system
+    on a different system. Moreover, they will very likely fail on a Windows system.
 
 1. Install [QGIS](https://qgis.org/). Be sure to get at the minimum version 3.44;
 
