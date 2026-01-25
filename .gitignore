@@ -3,11 +3,18 @@
 
 */*.egg-info
 
+# mkdocs documentation
+/site
+
+# pycharm project
+.idea
+
+# builds
+build
+
+
+
 # other files
 *.swp
 *un~
 *~
-
-.idea
-
-build

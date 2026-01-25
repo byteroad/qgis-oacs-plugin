@@ -1,0 +1,29 @@
+site_name: QGIS OACS plugin
+site_url: https://byteroad.github.io/qgis-oacs-plugin
+repo_url: https://github.com/byteroad/qgis-oacs-plugin
+
+nav:
+  - Home: "index.md"
+  - User guide: "user-guide.md"
+  - Development: "development.md"
+  - Changelog: "changelog-base.md"
+  - QGIS Repo: "repo/plugins.xml"
+
+theme:
+  name: material
+  palette:
+    primary: deep orange
+    accent: teal
+    scheme: preference
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - pymdownx.snippets:
+      base_path: .
+  - pymdownx.details
+  - pymdownx.superfences
+  - admonition
+
+plugins:
+  - search
