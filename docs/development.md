@@ -84,6 +84,28 @@ will need to call this installation command again (and potentially also restart 
     ```
 
 
+## Improving the development cycle with the plugin reloader plugin
+
+The [plugin reloader](https://plugins.qgis.org/plugins/plugin_reloader/) plugin is very handy for 
+development, as it allows speeding up the cycle of:
+
+- Work on the plugin code
+- Re-install it locally
+- Close QGIS
+- Open QGIS again
+
+With the plugin reloader you can both:
+
+1.  Reload the plugin in QGIS without having to restart the whole application. Just select it as the reloader target;
+2.  Run some external command(s) just before the plugin is reloaded. This allows us to call `plugin-admin` to 
+    re-install the plugin without leaving the QGIS window. For example:
+
+    ```shell
+    cd ~/dev/qgis-oacs-plugin
+    uv run plugin-admin --qgis-profile my-profile install
+    ```
+
+
 ## Releasing new versions
 
 This plugin uses an automated release process that is based upon
