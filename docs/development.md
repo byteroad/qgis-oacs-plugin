@@ -30,7 +30,7 @@
 1. Use the provided `plugin-admin` CLI utility to create a virtualenv and get the QGIS Python bindings in it:
 
     ```shell
-    uv plugin-admin --qgis-profile my-profile install-qgis-into-venv
+    uv run plugin-admin --qgis-profile my-profile install-qgis-into-venv
     ```
 
 1. Now you can work on the plugin code
@@ -38,7 +38,7 @@
 1. Test things out locally by installing the plugin with:
 
     ```shell
-    uv plugin-admin --qgis-profile my-profile install
+    uv run plugin-admin --qgis-profile my-profile install
     ```
 
 1. When ready, submit a PR for your code to be reviewed and merged
