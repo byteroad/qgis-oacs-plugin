@@ -1,4 +1,5 @@
 import functools
+import json
 import re
 import uuid
 from pathlib import Path
@@ -12,6 +13,7 @@ from qgis.PyQt import (
 )
 from qgis.PyQt.uic import loadUiType
 
+from .. import models
 from ..settings import (
     DataSourceConnectionSettings,
     settings_manager,
@@ -27,7 +29,6 @@ class DataSourceConnectionDialog(QtWidgets.QDialog, DialogUi):
     authcfg_acs: qgis.gui.QgsAuthConfigSelect
     connect_pb: QtWidgets.QPushButton
     detected_capabilities_lw: QtWidgets.QListWidget
-    plugin_capabilities_gb: qgis.gui.QgsCollapsibleGroupBox
     button_box: QtWidgets.QDialogButtonBox
     message_bar: qgis.gui.QgsMessageBar
 
@@ -113,17 +114,56 @@ class DataSourceConnectionDialog(QtWidgets.QDialog, DialogUi):
         connection_test_task.fetched.connect(response_handler)
 
     def handle_connection_test_response(self, network_fetcher_task: qgis.core.QgsNetworkContentFetcherTask) -> None:
-        self.toggle_editable_widgets()
         reply: QtNetwork.QNetworkReply | None = network_fetcher_task.reply()
         if reply and reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
             self.message_bar.pushMessage("Connection error", level=qgis.core.Qgis.MessageLevel.Critical)
             log_message(f"Connection error (error_code: {reply.error()})")
+            self.toggle_editable_widgets()
         else:
-            self.message_bar.pushMessage("Connection successful", level=qgis.core.Qgis.MessageLevel.Info)
-            log_message(f"{reply.contentAsString()=}")
+            self.message_bar.pushMessage(
+                "Connection successful", level=qgis.core.Qgis.MessageLevel.Info
+            )
+            landing_page = models.ApiLandingPage.from_api_response(
+                json.loads(network_fetcher_task.contentAsString())
+            )
+            log_message(f"{landing_page.title=}")
+            current_settings = self.get_connection_settings()
+            conformance_request_task = qgis.core.QgsNetworkContentFetcherTask(
+                url=QtCore.QUrl(landing_page.conformance_link.href),
+                authcfg=current_settings.auth_config,
+                description=f"test-oacs-plugin-data-source-connection-{current_settings.id}-conformance"
+            )
+            qgis.core.QgsApplication.taskManager().addTask(conformance_request_task)
+            conformance_task_response_handler = functools.partial(
+                self.handle_conformance_response,
+                conformance_request_task
+            )
+            conformance_request_task.fetched.connect(conformance_task_response_handler)
+
+    def handle_conformance_response(self, network_fetcher_task: qgis.core.QgsNetworkContentFetcherTask) -> None:
+        self.toggle_editable_widgets()
+        reply: QtNetwork.QNetworkReply | None = network_fetcher_task.reply()
+        if reply and reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
+            self.message_bar.pushMessage(
+                "Connection error retrieving conformance information",
+                level=qgis.core.Qgis.MessageLevel.Critical
+            )
+            log_message(f"Connection error (error_code: {reply.error()})")
+        else:
+            conformance = models.Conformance.from_api_response(
+                json.loads(network_fetcher_task.contentAsString())
+            )
+            log_message(f"{conformance=}")
+            self.detected_capabilities_lw.clear()
+            for conformance_item in conformance.conforms_to:
+                list_item = QtWidgets.QListWidgetItem(str(conformance_item))
+                list_item.setToolTip(conformance_item.conformance_url)
+                self.detected_capabilities_lw.addItem(
+                    list_item
+                )
 
     def populate_data_source_connection_info(self, data_source_connection: DataSourceConnectionSettings) -> None:
         self.name_le.setText(data_source_connection.name)
         self.base_url_le.setText(data_source_connection.base_url)
         if data_source_connection.auth_config:
-            self.authcfg_acs.setConfigId(data_source_connection.auth_config_id)
+            self.authcfg_acs.setConfigId(data_source_connection.auth_config)

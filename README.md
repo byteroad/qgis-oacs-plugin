@@ -19,6 +19,8 @@ https://github.com/byteroad/qgis-oacs-plugin/issues
 
 The following are known OACS servers:
 
+- http://45.55.99.236:8080/sensorhub/api - seems to have been freshly set up - let's use this one - it is protected by
+  auth (credentials supplied offline)
 - https://csa.demo.52north.org/ - as of now, this server's TLS certificate is not valid, so one needs to skip TLS 
   verification in order to use it (not sure how to do this in QGIS yet). The server also seems to not respond to its
   own advertised links (for example https://csa.demo.52north.org/collections/all_systems declares the existence of 
