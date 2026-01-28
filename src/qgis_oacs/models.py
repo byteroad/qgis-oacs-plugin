@@ -116,8 +116,9 @@ class Conformance:
         )
 
 
-@dataclasses.dataclass
-class RuntimeConnection:
-    connection_settings: DataSourceConnectionSettings
-    landing_page: ApiLandingPage | None = None
-    conformance: Conformance | None = None
+@dataclasses.dataclass(frozen=True)
+class ClientSearchParams:
+    path: str
+    query: dict[str, str | float | int | bool | list[str | float | int | bool]] | None = None
+    headers: dict[str, str] | None = None
+    body: bytes | None = None
