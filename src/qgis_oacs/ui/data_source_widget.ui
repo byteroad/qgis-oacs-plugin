@@ -83,17 +83,35 @@
     </widget>
    </item>
    <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+    <widget class="QPushButton" name="search_pb">
+     <property name="text">
+      <string>Search</string>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>319</height>
-      </size>
+    </widget>
+   </item>
+   <item>
+    <widget class="QScrollArea" name="search_results_sa">
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-    </spacer>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>735</width>
+        <height>258</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="button_box">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Help</set>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

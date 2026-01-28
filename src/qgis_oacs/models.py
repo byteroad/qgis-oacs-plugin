@@ -6,6 +6,13 @@ from .utils import log_message
 
 
 @dataclasses.dataclass(frozen=True)
+class SystemSearchFilterSet:
+    system_types: list[str]
+    asset_types: list[str]
+
+
+
+@dataclasses.dataclass(frozen=True)
 class Link:
     rel: str
     title: str

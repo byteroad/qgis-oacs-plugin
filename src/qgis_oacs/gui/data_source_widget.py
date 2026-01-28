@@ -21,6 +21,9 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, WidgetUi):
     connection_new_btn: QtWidgets.QPushButton
     connection_edit_btn: QtWidgets.QPushButton
     connection_remove_btn: QtWidgets.QPushButton
+    search_pb: QtWidgets.QPushButton
+    search_results_sa: QtWidgets.QScrollArea
+    button_box: QtWidgets.QDialogButtonBox
 
     _connection_controls: tuple[QtWidgets.QWidget, ...]
 
