@@ -6,6 +6,13 @@ from .utils import log_message
 
 
 @dataclasses.dataclass(frozen=True)
+class SystemSearchFilterSet:
+    system_types: list[str]
+    asset_types: list[str]
+
+
+
+@dataclasses.dataclass(frozen=True)
 class Link:
     rel: str
     title: str
@@ -109,8 +116,9 @@ class Conformance:
         )
 
 
-@dataclasses.dataclass
-class RuntimeConnection:
-    connection_settings: DataSourceConnectionSettings
-    landing_page: ApiLandingPage | None = None
-    conformance: Conformance | None = None
+@dataclasses.dataclass(frozen=True)
+class ClientSearchParams:
+    path: str
+    query: dict[str, str | float | int | bool | list[str | float | int | bool]] | None = None
+    headers: dict[str, str] | None = None
+    body: bytes | None = None
