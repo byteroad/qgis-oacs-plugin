@@ -196,7 +196,6 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
                 currently_enabled = widget.isEnabled()
                 widget.setEnabled(not currently_enabled)
 
-
     def handle_search_response(
             self,
             network_fetcher_task: qgis.core.QgsNetworkContentFetcherTask

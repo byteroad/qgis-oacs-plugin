@@ -1,8 +1,72 @@
-from urllib.parse import urlparse
+import datetime as dt
 import dataclasses
+import enum
+import typing
+from urllib.parse import urlparse
 
-from .settings import DataSourceConnectionSettings
+import qgis.core
+
 from .utils import log_message
+
+
+class SystemType(enum.Enum):
+    SENSOR = "sensor"
+    ACTUATOR = "actuator"
+    PLATFORM = "platform"
+    SAMPLER = "sampler"
+    SYSTEM = "system"
+
+    @classmethod
+    def from_api_response(cls, value: str) -> "SystemType":
+        return {
+            "http://www.w3.org/ns/sosa/Sensor": SystemType.SENSOR,
+            "http://www.w3.org/ns/sosa/Actuator": SystemType.ACTUATOR,
+            "http://www.w3.org/ns/sosa/Platform": SystemType.PLATFORM,
+            "http://www.w3.org/ns/sosa/Sampler": SystemType.SAMPLER,
+            "http://www.w3.org/ns/sosa/System": SystemType.SYSTEM,
+            "sosa:Sensor": SystemType.SENSOR,
+            "sosa:Actuator": SystemType.ACTUATOR,
+            "sosa:Platform": SystemType.PLATFORM,
+            "sosa:Sampler": SystemType.SAMPLER,
+            "sosa:System": SystemType.SYSTEM,
+        }[value]
+
+
+class AssetType(enum.Enum):
+    EQUIPMENT = "equipment"
+    HUMAN = "human"
+    LIVING_THING = "living_thing"
+    SIMULATION = "simulation"
+    PROCESS = "process"
+    GROUP = "group"
+    OTHER = "other"
+
+    @classmethod
+    def from_api_response(cls, value: str) -> "AssetType":
+        return {
+            "Equipment": AssetType.EQUIPMENT,
+            "Human": AssetType.HUMAN,
+            "LivingThing": AssetType.LIVING_THING,
+            "Simulation": AssetType.SIMULATION,
+            "Process": AssetType.PROCESS,
+            "Group": AssetType.GROUP,
+            "Other": AssetType.OTHER,
+        }[value]
+
+
+@dataclasses.dataclass(frozen=True)
+class TimePeriod:
+    start: typing.Literal["now"] | dt.datetime
+    end: typing.Literal["now"] | dt.datetime
+
+    @classmethod
+    def from_api_response(cls, value: typing.Sequence[str]) -> "TimePeriod":
+        return cls(
+            start=dt.datetime.fromisoformat(
+                raw_start) if (raw_start := value[0]) != "now" else raw_start,
+            end=dt.datetime.fromisoformat(
+                raw_end) if (raw_end := value[1]) != "now" else raw_end,
+        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -14,10 +78,10 @@ class SystemSearchFilterSet:
 
 @dataclasses.dataclass(frozen=True)
 class Link:
-    rel: str
-    title: str
     href: str
-    type: str
+    rel: str | None
+    type: str | None
+    title: str | None
 
     @classmethod
     def from_api_response(cls, response_content: dict) -> "Link":
@@ -122,3 +186,51 @@ class ClientSearchParams:
     query: dict[str, str | float | int | bool | list[str | float | int | bool]] | None = None
     headers: dict[str, str] | None = None
     body: bytes | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class System:
+    id_: str
+    feature_type: SystemType
+    uid: str
+    name: str
+    asset_type: AssetType | None
+    valid_time: TimePeriod
+    system_kind_link: Link
+    geometry: qgis.core.QgsGeometry | None = None
+    bbox: qgis.core.QgsRectangle | None = None
+    description: str | None = None
+    links: list[Link] = dataclasses.field(default_factory=list)
+
+    @classmethod
+    def from_geojson_api_response(cls, response_content: dict) -> "System":
+        return cls(
+            id_=response_content["id"],
+            feature_type=SystemType.from_api_response(
+                response_content["properties"]["featureType"]),
+            uid=response_content["properties"]["uid"],
+            name=response_content["properties"]["name"],
+            asset_type=(
+                AssetType.from_api_response(raw_asset_type)
+                if (raw_asset_type := response_content["properties"].get("assetType"))
+                else None
+            ),
+            valid_time=(
+                TimePeriod.from_api_response(raw_valid_time)
+                if (raw_valid_time := response_content["properties"].get("validTime"))
+                else None
+            ),
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class SystemListItem(System): ...
+
+
+@dataclasses.dataclass(frozen=True)
+class SystemList:
+    system_items: list[SystemListItem]
+
+    @classmethod
+    def from_geojson_api_response(cls, response_content: dict) -> "SystemList":
+        ...
