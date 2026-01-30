@@ -256,7 +256,7 @@ class SystemList:
     @classmethod
     def from_geojson_api_response(cls, response_content: dict) -> "SystemList":
         system_items = []
-        for raw_system in response_content.get("items", []):
+        for raw_system in response_content.get("features", []):
             try:
                 system_items.append(System.from_geojson_api_response(raw_system))
             except ValueError as err:

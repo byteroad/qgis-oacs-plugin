@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>OGC API - Connected Systems plugin - New Connection Configuration</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QFrame" name="connection_details">
      <property name="frameShape">
@@ -79,6 +79,22 @@
     </widget>
    </item>
    <item>
+    <widget class="QgsCollapsibleGroupBox" name="advanced_settings_gb">
+     <property name="title">
+      <string>Advanced Settings</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QCheckBox" name="use_f_query_param_cb">
+        <property name="text">
+         <string>Use `f` query parameter for content negotiation</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="connect_pb">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -118,6 +134,12 @@
    <class>QgsAuthConfigSelect</class>
    <extends>QWidget</extends>
    <header>qgsauthconfigselect.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsCollapsibleGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>qgscollapsiblegroupbox.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>

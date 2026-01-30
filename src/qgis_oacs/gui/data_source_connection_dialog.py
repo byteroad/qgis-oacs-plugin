@@ -31,6 +31,7 @@ class DataSourceConnectionDialog(QtWidgets.QDialog, DialogUi):
     detected_capabilities_lw: QtWidgets.QListWidget
     button_box: QtWidgets.QDialogButtonBox
     message_bar: qgis.gui.QgsMessageBar
+    use_f_query_param_cb: QtWidgets.QCheckBox
 
     data_source_connection_id: uuid.UUID
     _to_toggle_during_connection_test: tuple[QtWidgets.QWidget, ...]
@@ -43,6 +44,12 @@ class DataSourceConnectionDialog(QtWidgets.QDialog, DialogUi):
     ):
         super().__init__()
         self.setupUi(self)
+        self.use_f_query_param_cb.setToolTip(
+            "Whether to include the `f` query parameter set to the desired response "
+            "type (e.g. f=geojson) when making a request. This should not be needed "
+            "for servers that are able to read the HTTP `Accept` "
+            "header, which is the usual way to perform content negotiation."
+        )
         self.message_bar = qgis.gui.QgsMessageBar()
         self.message_bar.setSizePolicy(
             QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed
@@ -91,6 +98,7 @@ class DataSourceConnectionDialog(QtWidgets.QDialog, DialogUi):
             name=self.name_le.text().strip(),
             base_url=self.base_url_le.text().strip(),
             auth_config=self.authcfg_acs.configId(),
+            use_f_query_param=self.use_f_query_param_cb.isChecked(),
         )
 
     def toggle_editable_widgets(self) -> None:
@@ -165,5 +173,6 @@ class DataSourceConnectionDialog(QtWidgets.QDialog, DialogUi):
     def populate_data_source_connection_info(self, data_source_connection: DataSourceConnectionSettings) -> None:
         self.name_le.setText(data_source_connection.name)
         self.base_url_le.setText(data_source_connection.base_url)
+        self.use_f_query_param_cb.setChecked(data_source_connection.use_f_query_param)
         if data_source_connection.auth_config:
             self.authcfg_acs.setConfigId(data_source_connection.auth_config)

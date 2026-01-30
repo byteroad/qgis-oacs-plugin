@@ -37,6 +37,7 @@ class DataSourceConnectionSettings:
     base_url: str
     network_requests_timeout: int = dataclasses.field(default_factory=_get_default_network_requests_timeout)
     auth_config: str | None = None
+    use_f_query_param: bool = False
 
     @classmethod
     def from_qgs_settings(cls, connection_identifier: uuid.UUID):
@@ -51,6 +52,11 @@ class DataSourceConnectionSettings:
                 base_url=raw_connection_settings.value("base_url"),
                 auth_config=reported_auth_cfg,
                 network_requests_timeout=raw_connection_settings.value("network_requests_timeout"),
+                use_f_query_param=raw_connection_settings.value(
+                    "use_f_query_param",
+                    defaultValue=False,
+                    type=bool
+                ),
             )
 
     def to_json(self):
@@ -61,6 +67,7 @@ class DataSourceConnectionSettings:
             raw_connection_settings.setValue("name", self.name)
             raw_connection_settings.setValue("base_url", self.base_url)
             raw_connection_settings.setValue("network_requests_timeout", self.network_requests_timeout)
+            raw_connection_settings.setValue("use_f_query_param", self.use_f_query_param)
             if self.auth_config:
                 raw_connection_settings.setValue("auth_config", self.auth_config)
 

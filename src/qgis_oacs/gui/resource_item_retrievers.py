@@ -70,16 +70,23 @@ class SearchSystemItemsWidget(QtWidgets.QWidget, SearchSystemItemsWidgetUi):
 
     def initiate_search(self) -> None:
         self.clear_search_results()
-        search_query = self.prepare_query()
+        search_query = self.prepare_system_list_query()
         request_query = QtCore.QUrlQuery()
-        if search_query.query:
-            request_query.setQueryItems(list(search_query.query.items()))
         current_connection = settings_manager.get_current_data_source_connection()
+        query_items = {
+            **(search_query.query or {})
+        }
+        if current_connection.use_f_query_param:
+            query_items["f"] = "geojson"
+        if len(query_items) > 0:
+            request_query.setQueryItems(list(query_items.items()))
         request_url =QtCore.QUrl(f"{current_connection.base_url}{search_query.path}")
         if not request_query.isEmpty():
             request_url.setQuery(request_query)
+        request = QtNetwork.QNetworkRequest(request_url)
+        request.setRawHeader(b"Accept", b"application/geo+json")
         api_request_task = qgis.core.QgsNetworkContentFetcherTask(
-            url=request_url,
+            request=request,
             authcfg=current_connection.auth_config,
             description=f"test-oacs-plugin-search"
         )
@@ -89,14 +96,14 @@ class SearchSystemItemsWidget(QtWidgets.QWidget, SearchSystemItemsWidgetUi):
             api_request_task,
         )
         api_request_task.fetched.connect(response_handler)
-        self.toggle_interactive_widgets(False)
+        # self.toggle_interactive_widgets(False)
         self.search_started.emit()
 
     def handle_search_response(
             self,
             network_fetcher_task: qgis.core.QgsNetworkContentFetcherTask
     ) -> None:
-        self.toggle_interactive_widgets(True)
+        # self.toggle_interactive_widgets(True)
         reply: QtNetwork.QNetworkReply | None = network_fetcher_task.reply()
         if reply and reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
             self.message_bar.pushMessage(
@@ -108,14 +115,15 @@ class SearchSystemItemsWidget(QtWidgets.QWidget, SearchSystemItemsWidgetUi):
             )
             response_payload = network_fetcher_task.contentAsString()
             # utils.log_message(response_payload)
-            system_list = self.parse_geojson_response(json.loads(response_payload))
+            system_list = self.parse_system_list_geojson_response(json.loads(response_payload))
             for system_item in system_list.system_items:
                 display_widget = SystemListItemWidget(resource=system_item)
                 self.search_results_layout.addWidget(display_widget)
             self.search_results_layout.addStretch()
             utils.log_message(f"{system_list=}")
+            self.search_ended.emit()
 
-    def prepare_query(self) -> models.ClientSearchParams:
+    def prepare_system_list_query(self) -> models.ClientSearchParams:
         query = {
             "q": raw_q if (raw_q := self.free_text_le.text()) != "" else None,
         }
@@ -126,7 +134,7 @@ class SearchSystemItemsWidget(QtWidgets.QWidget, SearchSystemItemsWidgetUi):
             query=query,
         )
 
-    def parse_geojson_response(self, response: dict) -> models.SystemList:
+    def parse_system_list_geojson_response(self, response: dict) -> models.SystemList:
         return models.SystemList.from_geojson_api_response(response)
 
     def clear_search_results(self) -> None:
