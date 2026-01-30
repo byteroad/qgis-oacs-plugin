@@ -1,12 +1,16 @@
 import datetime as dt
 import dataclasses
 import enum
+import json
 import typing
 from urllib.parse import urlparse
 
 import qgis.core
 
-from .utils import log_message
+from .utils import (
+    log_message,
+    parse_raw_rfc3339_datetime,
+)
 
 
 class SystemType(enum.Enum):
@@ -62,10 +66,14 @@ class TimePeriod:
     @classmethod
     def from_api_response(cls, value: typing.Sequence[str]) -> "TimePeriod":
         return cls(
-            start=dt.datetime.fromisoformat(
-                raw_start) if (raw_start := value[0]) != "now" else raw_start,
-            end=dt.datetime.fromisoformat(
-                raw_end) if (raw_end := value[1]) != "now" else raw_end,
+            start=(
+                parse_raw_rfc3339_datetime(raw_start)
+                if (raw_start := value[0]) != "now" else raw_start
+            ),
+            end=(
+                parse_raw_rfc3339_datetime(raw_end)
+                if (raw_end := value[1]) != "now" else raw_end
+            ),
         )
 
 
@@ -197,8 +205,8 @@ class System:
     asset_type: AssetType | None
     valid_time: TimePeriod
     system_kind_link: Link
-    geometry: qgis.core.QgsGeometry | None = None
-    bbox: qgis.core.QgsRectangle | None = None
+    geometry: qgis.core.QgsReferencedGeometry | None = None
+    bbox: qgis.core.QgsReferencedRectangle | None = None
     description: str | None = None
     links: list[Link] = dataclasses.field(default_factory=list)
 
@@ -220,17 +228,39 @@ class System:
                 if (raw_valid_time := response_content["properties"].get("validTime"))
                 else None
             ),
+            system_kind_link=(
+                Link.from_api_response(raw_system_kind)
+                if (raw_system_kind := response_content["properties"].get("systemKind@link"))
+                else None
+            ),
+            geometry=qgis.core.QgsReferencedGeometry(
+                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_geometry)),
+                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
+            ) if (raw_geometry := response_content.get("geometry")) else None,
+            bbox=qgis.core.QgsReferencedGeometry(
+                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_bbox)),
+                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
+            ) if (raw_bbox := response_content.get("bbox")) else None,
+            description=response_content["properties"].get("description"),
+            links=[
+                Link.from_api_response(raw_link)
+                for raw_link in response_content.get("links", [])
+            ]
         )
 
 
 @dataclasses.dataclass(frozen=True)
-class SystemListItem(System): ...
-
-
-@dataclasses.dataclass(frozen=True)
 class SystemList:
-    system_items: list[SystemListItem]
+    system_items: list[System]
 
     @classmethod
     def from_geojson_api_response(cls, response_content: dict) -> "SystemList":
-        ...
+        system_items = []
+        for raw_system in response_content.get("items", []):
+            try:
+                system_items.append(System.from_geojson_api_response(raw_system))
+            except ValueError as err:
+                log_message(f"Could not parse {raw_system!r} - {str(err)}")
+        return cls(
+            system_items=system_items
+        )

@@ -2,4 +2,22 @@
     <qresource prefix="/plugins/qgis_oacs" >
         <file>graph_3.svg</file>
     </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
+        <file>labs.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
+        <file>manufacturing.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
+        <file>search.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
+        <file>sensors_krx.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
+        <file>stadia_controller.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
+        <file>tools_ladder.svg</file>
+    </qresource>
 </RCC>
