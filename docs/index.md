@@ -1,6 +1,6 @@
 # QGIS OACS Plugin
 
-{ inspirational screenshot - to be added }
+![Inspirational screenshot](images/inspirational-screenshot.png)
 
 A [QGIS] plugin for working with [OGC API - Connected Systems] servers
 

@@ -43,6 +43,7 @@ List of Google material icons used:
 
 - [Graph 3](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:graph_3:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=node&icon.size=24&icon.color=%231f1f1f)
 - [Labs](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:labs:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=sampl&icon.size=24&icon.color=%231f1f1f)
+- [Lab Panel](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:lab_panel:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=sample&icon.size=24&icon.color=%231f1f1f)
 - [Manufacturing](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:manufacturing:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=machine&icon.size=24&icon.color=%231f1f1f)
 - [Search](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:search:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=search&icon.size=24&icon.color=%231f1f1f)
 - [Sensors Krx](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:sensors_krx:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=machine&icon.size=24&icon.color=%231f1f1f)

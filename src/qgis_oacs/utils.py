@@ -1,4 +1,5 @@
 import datetime as dt
+import functools
 import re
 import sys
 import typing
@@ -7,9 +8,15 @@ import qgis.core
 from qgis.PyQt import (
     QtCore,
     QtGui,
+    QtNetwork,
     QtSvg,
     QtWidgets,
 )
+
+from .settings import settings_manager
+
+if typing.TYPE_CHECKING:
+    from . import models
 
 
 def log_message(message: str, level: qgis.core.Qgis.MessageLevel = qgis.core.Qgis.MessageLevel.Info) -> None:
@@ -33,6 +40,7 @@ def show_message(
         progress_bar.setMaximum(0)
         message_item.layout().addWidget(progress_bar)
     message_bar.pushWidget(message_item, level=level)
+
 
 def toggle_widgets_enabled(
         widgets: typing.Sequence[QtWidgets.QWidget],
@@ -94,3 +102,60 @@ def create_pixmap_from_svg(svg_path: str, target_size: int) -> QtGui.QPixmap:
 def create_icon_from_svg(svg_path: str, target_size: int = 16) -> QtGui.QIcon:
     scaled_pixmap = create_pixmap_from_svg(svg_path, target_size)
     return QtGui.QIcon(scaled_pixmap)
+
+
+def clear_search_results(layout_displayer: QtWidgets.QLayout) -> None:
+    while layout_displayer.count():
+        item = layout_displayer.takeAt(0)
+        if widget := item.widget():
+            widget.deleteLater()
+
+
+@typing.overload
+def dispatch_network_search_request(
+        search_query: "models.ClientSearchParams",
+        response_handler: typing.Callable[[qgis.core.QgsNetworkContentFetcherTask], None]
+) -> None:
+    pass
+
+
+@typing.overload
+def dispatch_network_search_request(
+        search_query: str,
+        response_handler: typing.Callable[[qgis.core.QgsNetworkContentFetcherTask], None]
+) -> None:
+    pass
+
+
+def dispatch_network_search_request(
+        search_query,
+        response_handler: typing.Callable[[qgis.core.QgsNetworkContentFetcherTask], None]
+) -> None:
+    current_connection = settings_manager.get_current_data_source_connection()
+    if isinstance(search_query, str):
+        request_url = QtCore.QUrl(search_query)
+    else:
+        request_query = QtCore.QUrlQuery()
+        query_items = {
+            **(search_query.query or {})
+        }
+        if current_connection.use_f_query_param:
+            query_items["f"] = "geojson"
+        if len(query_items) > 0:
+            request_query.setQueryItems(list(query_items.items()))
+        request_url =QtCore.QUrl(f"{current_connection.base_url}{search_query.path}")
+        if not request_query.isEmpty():
+            request_url.setQuery(request_query)
+    request = QtNetwork.QNetworkRequest(request_url)
+    request.setRawHeader(b"Accept", b"application/geo+json")
+    api_request_task = qgis.core.QgsNetworkContentFetcherTask(
+        request=request,
+        authcfg=current_connection.auth_config,
+        description=f"test-oacs-plugin-search"
+    )
+    qgis.core.QgsApplication.taskManager().addTask(api_request_task)
+    handler = functools.partial(
+        response_handler,
+        api_request_task,
+    )
+    api_request_task.fetched.connect(handler)

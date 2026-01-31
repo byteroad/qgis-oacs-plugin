@@ -7,6 +7,11 @@ from urllib.parse import urlparse
 
 import qgis.core
 
+from .constants import (
+    IconPath,
+    LinkRelation,
+    OgcLinkRelation,
+)
 from .utils import (
     log_message,
     parse_raw_rfc3339_datetime,
@@ -35,6 +40,15 @@ class SystemType(enum.Enum):
             "sosa:System": SystemType.SYSTEM,
         }[value]
 
+    def get_icon_path(self) -> str:
+        return {
+            self.SENSOR: IconPath.system_type_sensor,
+            self.ACTUATOR: IconPath.system_type_actuator,
+            self.PLATFORM: IconPath.system_type_platform,
+            self.SAMPLER: IconPath.system_type_sampler,
+            self.SYSTEM: IconPath.system_type_system,
+        }.get(self, IconPath.system_type_system)
+
 
 class AssetType(enum.Enum):
     EQUIPMENT = "equipment"
@@ -56,6 +70,17 @@ class AssetType(enum.Enum):
             "Group": AssetType.GROUP,
             "Other": AssetType.OTHER,
         }[value]
+
+    def get_icon_path(self) -> str:
+        return {
+            self.EQUIPMENT: IconPath.system_asset_type_equipment,
+            self.HUMAN: IconPath.system_asset_type_human,
+            self.LIVING_THING: IconPath.system_asset_type_living_thing,
+            self.SIMULATION: IconPath.system_asset_type_simulation,
+            self.PROCESS: IconPath.system_asset_type_process,
+            self.GROUP: IconPath.system_asset_type_group,
+            self.OTHER: IconPath.system_asset_type_other,
+        }.get(self, IconPath.system_asset_type_other)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -87,9 +112,9 @@ class SystemSearchFilterSet:
 @dataclasses.dataclass(frozen=True)
 class Link:
     href: str
-    rel: str | None
-    type: str | None
-    title: str | None
+    rel: str | None = None
+    type: str | None = None
+    title: str | None = None
 
     @classmethod
     def from_api_response(cls, response_content: dict) -> "Link":
@@ -196,10 +221,25 @@ class ClientSearchParams:
     body: bytes | None = None
 
 
+class OacsFeatureProtocol(typing.Protocol):
+    name: str
+    uid: str
+    feature_type: str
+    feature_type_icon_path: str
+    collection_search_url_fragment: str
+
+    @classmethod
+    def from_geojson_api_response(cls, response_content: dict) -> "OacsFeatureProtocol": ...
+
+    def get_renderable_properties(self) -> dict[str, str]: ...
+
+    def get_relevant_links(self) -> list[Link]: ...
+
+
 @dataclasses.dataclass(frozen=True)
 class System:
     id_: str
-    feature_type: SystemType
+    _feature_type: SystemType
     uid: str
     name: str
     asset_type: AssetType | None
@@ -209,28 +249,39 @@ class System:
     bbox: qgis.core.QgsReferencedRectangle | None = None
     description: str | None = None
     links: list[Link] = dataclasses.field(default_factory=list)
+    additional_properties: dict[str, str] | None = None
+
+    collection_search_url_fragment: str = "/systems"
+
+    @property
+    def feature_type(self) -> str:
+        return self._feature_type.name
+
+    @property
+    def feature_type_icon_path(self) -> str:
+        return self._feature_type.get_icon_path()
 
     @classmethod
     def from_geojson_api_response(cls, response_content: dict) -> "System":
+        properties = dict(response_content["properties"])
         return cls(
             id_=response_content["id"],
-            feature_type=SystemType.from_api_response(
-                response_content["properties"]["featureType"]),
-            uid=response_content["properties"]["uid"],
-            name=response_content["properties"]["name"],
+            _feature_type=SystemType.from_api_response(properties.pop("featureType")),
+            uid=properties.pop("uid"),
+            name=properties.pop("name"),
             asset_type=(
                 AssetType.from_api_response(raw_asset_type)
-                if (raw_asset_type := response_content["properties"].get("assetType"))
+                if (raw_asset_type := properties.pop("assetType", None))
                 else None
             ),
             valid_time=(
                 TimePeriod.from_api_response(raw_valid_time)
-                if (raw_valid_time := response_content["properties"].get("validTime"))
+                if (raw_valid_time := properties.pop("validTime", None))
                 else None
             ),
             system_kind_link=(
                 Link.from_api_response(raw_system_kind)
-                if (raw_system_kind := response_content["properties"].get("systemKind@link"))
+                if (raw_system_kind := properties.pop("systemKind@link", None))
                 else None
             ),
             geometry=qgis.core.QgsReferencedGeometry(
@@ -241,26 +292,159 @@ class System:
                 geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_bbox)),
                 crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
             ) if (raw_bbox := response_content.get("bbox")) else None,
-            description=response_content["properties"].get("description"),
+            description=properties.pop("description", None),
             links=[
                 Link.from_api_response(raw_link)
                 for raw_link in response_content.get("links", [])
-            ]
+            ],
+            additional_properties={k: str(v) for k, v in properties.items()}
         )
+
+    def get_renderable_properties(self) -> dict[str, str]:
+        return {
+            "Name": self.name,
+            "UID": self.uid,
+            "Feature Type": self._feature_type.name.upper(),
+            "Asset Type": self.asset_type.name.upper() if self.asset_type else "Unknown",
+            "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
+            **{k.capitalize(): str(v) for k, v in self.additional_properties.items()}
+        }
+
+    def get_relevant_links(self) -> list[Link]:
+        # we look for both `rel=<name>` and `rel=ogc-rel:<name>` because of:
+        #
+        # https://github.com/opengeospatial/ogcapi-connected-systems/issues/173
+        #
+        relevant_link_rels = (
+            LinkRelation.sub_systems,
+            LinkRelation.sampling_features,
+            LinkRelation.deployments,
+            LinkRelation.procedures,
+            LinkRelation.data_streams,
+            LinkRelation.control_streams,
+            OgcLinkRelation.sub_systems,
+            OgcLinkRelation.sampling_features,
+            OgcLinkRelation.deployments,
+            OgcLinkRelation.procedures,
+            OgcLinkRelation.data_streams,
+            OgcLinkRelation.control_streams,
+
+        )
+        return [link for link in self.links if link.rel in relevant_link_rels]
+
+
+@dataclasses.dataclass(frozen=True)
+class SamplingFeature:
+    id_: str
+    feature_type: str
+    uid: str
+    name: str
+    valid_time: TimePeriod
+    sampled_feature_link: Link
+    geometry: qgis.core.QgsReferencedGeometry | None = None
+    bbox: qgis.core.QgsReferencedRectangle | None = None
+    description: str | None = None
+    links: list[Link] = dataclasses.field(default_factory=list)
+    additional_properties: dict[str, str] | None = None
+    collection_search_url_fragment: str = "/samplingFeatures"
+
+    @property
+    def feature_type_icon_path(self) -> str:
+        return IconPath.sampling_feature
+
+    # TODO: Check required and optional properties
+    @classmethod
+    def from_geojson_api_response(cls, response_content: dict) -> "SamplingFeature":
+        properties = dict(response_content["properties"])
+        return cls(
+            id_=response_content["id"],
+            feature_type=properties.pop("featureType"),
+            uid=properties.pop("uid"),
+            name=properties.pop("name"),
+            valid_time=(
+                TimePeriod.from_api_response(raw_valid_time)
+                if (raw_valid_time := properties.pop("validTime", None))
+                else None
+            ),
+            sampled_feature_link=(
+                Link.from_api_response(raw_system_kind)
+                if (raw_system_kind := properties.pop("systemKind@link", None))
+                else None
+            ),
+            geometry=qgis.core.QgsReferencedGeometry(
+                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_geometry)),
+                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
+            ) if (raw_geometry := response_content.get("geometry")) else None,
+            bbox=qgis.core.QgsReferencedGeometry(
+                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_bbox)),
+                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
+            ) if (raw_bbox := response_content.get("bbox")) else None,
+            description=properties.pop("description", None),
+            links=[
+                Link.from_api_response(raw_link)
+                for raw_link in response_content.get("links", [])
+            ],
+            additional_properties={k: str(v) for k, v in properties.items()}
+        )
+
+    def get_renderable_properties(self) -> dict[str, str]:
+        return {
+            "Name": self.name,
+            "UID": self.uid,
+            "Feature Type": self.feature_type.upper(),
+            "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
+            **{k.capitalize(): str(v) for k, v in self.additional_properties.items()}
+        }
+
+    def get_relevant_links(self) -> list[Link]:
+        relevant_link_rels = (
+            LinkRelation.sampled_feature,
+            LinkRelation.parent_system,
+            LinkRelation.sample_of,
+            LinkRelation.data_streams,
+            LinkRelation.control_streams,
+            OgcLinkRelation.sampled_feature,
+            OgcLinkRelation.parent_system,
+            OgcLinkRelation.sample_of,
+            OgcLinkRelation.data_streams,
+            OgcLinkRelation.control_streams,
+        )
+        # we look for both `rel=<name>` and `rel=ogc-rel:<name>` because of:
+        #
+        # https://github.com/opengeospatial/ogcapi-connected-systems/issues/173
+        #
+        return [link for link in self.links if link.rel in relevant_link_rels]
 
 
 @dataclasses.dataclass(frozen=True)
 class SystemList:
-    system_items: list[System]
+    items: list[System]
 
     @classmethod
     def from_geojson_api_response(cls, response_content: dict) -> "SystemList":
-        system_items = []
+        items = []
         for raw_system in response_content.get("features", []):
             try:
-                system_items.append(System.from_geojson_api_response(raw_system))
+                items.append(System.from_geojson_api_response(raw_system))
             except ValueError as err:
                 log_message(f"Could not parse {raw_system!r} - {str(err)}")
         return cls(
-            system_items=system_items
+            items=items
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class SamplingFeatureList:
+    items: list[SamplingFeature]
+
+    @classmethod
+    def from_geojson_api_response(cls, response_content: dict) -> "SamplingFeatureList":
+        items = []
+        for raw in response_content.get("features", []):
+            try:
+                items.append(SamplingFeature.from_geojson_api_response(raw))
+            except ValueError as err:
+                log_message(f"Could not parse {raw!r} - {str(err)}")
+        return cls(
+            items=items
         )

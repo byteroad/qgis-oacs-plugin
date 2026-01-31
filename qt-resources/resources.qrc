@@ -3,6 +3,9 @@
         <file>graph_3.svg</file>
     </qresource>
     <qresource prefix="/plugins/qgis_oacs" >
+        <file>lab_panel.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
         <file>labs.svg</file>
     </qresource>
     <qresource prefix="/plugins/qgis_oacs" >

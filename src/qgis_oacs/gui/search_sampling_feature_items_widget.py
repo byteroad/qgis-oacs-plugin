@@ -1,0 +1,96 @@
+import json
+import typing
+from pathlib import Path
+
+import qgis.core
+import qgis.gui
+from qgis.PyQt import (
+    QtCore,
+    QtNetwork,
+    QtWidgets,
+)
+from qgis.PyQt.uic import loadUiType
+
+from .. import (
+    models,
+    utils,
+)
+from ..constants import IconPath
+from .list_item_widgets import ListItemWidget
+
+SearchSamplingFeatureItemsWidgetUi, _ = loadUiType(
+    Path(__file__).parents[1] / "ui/search_sampling_feature_items_widget.ui")
+
+
+class ResourceCollectionRetrieverProtocol(typing.Protocol):
+    search_started: QtCore.pyqtSignal
+    search_ended: QtCore.pyqtSignal
+    search_results_layout: QtWidgets.QLayout
+
+
+class SearchSamplingFeatureItemsWidget(QtWidgets.QWidget, SearchSamplingFeatureItemsWidgetUi):
+    free_text_le: QtWidgets.QLineEdit
+    search_pb: QtWidgets.QPushButton
+    search_results_layout: QtWidgets.QVBoxLayout
+
+    _interactive_widgets: tuple[QtWidgets.QWidget, ...]
+
+    search_started = QtCore.pyqtSignal()
+    search_ended = QtCore.pyqtSignal()
+
+    def __init__(
+            self,
+            parent: QtWidgets.QWidget=None
+    ) -> None:
+        super().__init__(parent)
+        self.setupUi(self)
+        self.search_pb.setIcon(utils.create_icon_from_svg(IconPath.search))
+        self._interactive_widgets = (
+            self.free_text_le,
+            self.search_pb,
+        )
+        self.search_pb.clicked.connect(self.initiate_search)
+        self.search_started.connect(self.toggle_interactive_widgets)
+        self.search_ended.connect(self.toggle_interactive_widgets)
+
+    def toggle_interactive_widgets(self, force_state: bool | None = None) -> None:
+        utils.toggle_widgets_enabled(self._interactive_widgets, force_state)
+
+    def initiate_search(self) -> None:
+        utils.clear_search_results(self.search_results_layout)
+        utils.dispatch_network_search_request(
+            search_query=self.prepare_query(),
+            response_handler=self.handle_search_response,
+        )
+        self.search_started.emit()
+
+    def handle_search_response(
+            self,
+            network_fetcher_task: qgis.core.QgsNetworkContentFetcherTask
+    ) -> None:
+        reply: QtNetwork.QNetworkReply | None = network_fetcher_task.reply()
+        if reply and reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
+            utils.log_message(f"Connection error (error_code: {reply.error()})")
+        else:
+            response_payload = network_fetcher_task.contentAsString()
+            # utils.log_message(response_payload)
+            sampling_feature_list = models.SamplingFeatureList.from_geojson_api_response(
+                json.loads(response_payload))
+
+            for sampling_feature_item in sampling_feature_list.items:
+                display_widget = ListItemWidget(
+                    resource=sampling_feature_item)
+                self.search_results_layout.addWidget(display_widget)
+            self.search_results_layout.addStretch()
+            self.search_ended.emit()
+
+    def prepare_query(self) -> models.ClientSearchParams:
+        query = {
+            "q": raw_q if (raw_q := self.free_text_le.text()) != "" else None,
+        }
+        query = {k: v for k, v in query.items() if v is not None} or None
+
+        return models.ClientSearchParams(
+            path="/samplingFeatures",
+            query=query,
+        )

@@ -11,8 +11,9 @@ from qgis.PyQt import (
 from qgis.PyQt.uic import loadUiType
 
 from ..settings import settings_manager
-from ..utils import toggle_widgets_enabled
-from . import resource_item_retrievers
+from .. import utils
+from .search_sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
+from .search_system_items_widget import SearchSystemItemsWidget
 from .data_source_connection_dialog import DataSourceConnectionDialog
 
 DataSourceWidgetUi, _ = loadUiType(Path(__file__).parents[1] / "ui/data_source_widget.ui")
@@ -24,8 +25,9 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
     connection_edit_btn: QtWidgets.QPushButton
     connection_remove_btn: QtWidgets.QPushButton
     resource_types_tw: QtWidgets.QTabWidget
-    resource_type_pages: dict[str, resource_item_retrievers.ResourceCollectionRetrieverProtocol]
-    resource_type_system_page: resource_item_retrievers.SearchSystemItemsWidget
+    resource_type_pages: dict[str, QtWidgets.QWidget]
+    resource_type_system_page: SearchSystemItemsWidget
+    resource_type_sampling_feature_page: SearchSamplingFeatureItemsWidget
     button_box: QtWidgets.QDialogButtonBox
     message_bar: qgis.gui.QgsMessageBar
 
@@ -52,8 +54,8 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
         self.layout().insertLayout(4, self.grid_layout)
 
         self.resource_type_pages = {
-            "systems": resource_item_retrievers.SearchSystemItemsWidget(
-                message_bar=self.message_bar)
+            "systems": SearchSystemItemsWidget(),
+            "sampling features": SearchSamplingFeatureItemsWidget()
         }
         self.resource_types_tw.clear()
         for name, page in self.resource_type_pages.items():
@@ -136,13 +138,13 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
             self.connection_edit_btn.setEnabled(False)
             self.connection_remove_btn.setEnabled(False)
         for widget_page in self.resource_type_pages.values():
-            widget_page.clear_search_results()
+            utils.clear_search_results(widget_page.search_results_layout)
 
     def handle_search_started(self):
-        toggle_widgets_enabled(self._interactive_widgets, force_state=True)
+        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=True)
 
     def handle_search_ended(self):
-        toggle_widgets_enabled(self._interactive_widgets, force_state=False)
+        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=False)
 
     def _spawn_data_source_connection_deletion_dialog(self, connection_name: str):
         message = f"Remove connection {connection_name!r}?"

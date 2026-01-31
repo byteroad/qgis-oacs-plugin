@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>774</width>
-    <height>123</height>
+    <height>574</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -87,6 +87,12 @@
       </item>
       <item>
        <widget class="QFrame" name="details_frame">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -95,7 +101,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <layout class="QVBoxLayout" name="details_layout"/>
+          <widget class="QTableWidget" name="details_properties_tw"/>
          </item>
         </layout>
        </widget>
