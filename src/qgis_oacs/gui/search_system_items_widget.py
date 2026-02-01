@@ -15,6 +15,7 @@ from .. import (
     utils,
 )
 from ..constants import IconPath
+from ..settings import settings_manager
 from .list_item_widgets import ListItemWidget
 
 SearchSystemItemsWidgetUi, _ = loadUiType(
@@ -73,7 +74,7 @@ class SearchSystemItemsWidget(QtWidgets.QWidget, SearchSystemItemsWidgetUi):
         else:
             response_payload = network_fetcher_task.contentAsString()
             # utils.log_message(response_payload)
-            system_list = models.SystemList.from_geojson_api_response(json.loads(response_payload))
+            system_list = models.SystemList.from_api_response(json.loads(response_payload))
             for system_item in system_list.items:
                 display_widget = ListItemWidget(resource=system_item)
                 self.search_results_layout.addWidget(display_widget)
@@ -83,10 +84,15 @@ class SearchSystemItemsWidget(QtWidgets.QWidget, SearchSystemItemsWidgetUi):
     def prepare_query(self) -> models.ClientSearchParams:
         query = {
             "q": raw_q if (raw_q := self.free_text_le.text()) != "" else None,
+            "f": (
+                models.System.f_parameter_value
+                if settings_manager.get_current_data_source_connection().use_f_query_param
+                else None
+            )
         }
         query = {k: v for k, v in query.items() if v is not None} or None
 
         return models.ClientSearchParams(
-            path="/systems",
+            path=models.System.collection_search_url_fragment,
             query=query,
         )

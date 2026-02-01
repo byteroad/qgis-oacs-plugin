@@ -1,5 +1,11 @@
 <RCC>
     <qresource prefix="/plugins/qgis_oacs" >
+        <file>circle.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
+        <file>eye_tracking.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
         <file>graph_3.svg</file>
     </qresource>
     <qresource prefix="/plugins/qgis_oacs" >
@@ -19,6 +25,9 @@
     </qresource>
     <qresource prefix="/plugins/qgis_oacs" >
         <file>stadia_controller.svg</file>
+    </qresource>
+    <qresource prefix="/plugins/qgis_oacs" >
+        <file>stream.svg</file>
     </qresource>
     <qresource prefix="/plugins/qgis_oacs" >
         <file>tools_ladder.svg</file>

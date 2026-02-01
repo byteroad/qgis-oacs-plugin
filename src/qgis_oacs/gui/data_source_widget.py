@@ -12,6 +12,7 @@ from qgis.PyQt.uic import loadUiType
 
 from ..settings import settings_manager
 from .. import utils
+from .search_datastream_items_widget import SearchDataStreamItemsWidget
 from .search_sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
 from .search_system_items_widget import SearchSystemItemsWidget
 from .data_source_connection_dialog import DataSourceConnectionDialog
@@ -26,6 +27,7 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
     connection_remove_btn: QtWidgets.QPushButton
     resource_types_tw: QtWidgets.QTabWidget
     resource_type_pages: dict[str, QtWidgets.QWidget]
+    resource_type_datastream_page: SearchDataStreamItemsWidget
     resource_type_system_page: SearchSystemItemsWidget
     resource_type_sampling_feature_page: SearchSamplingFeatureItemsWidget
     button_box: QtWidgets.QDialogButtonBox
@@ -55,7 +57,8 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
 
         self.resource_type_pages = {
             "systems": SearchSystemItemsWidget(),
-            "sampling features": SearchSamplingFeatureItemsWidget()
+            "sampling features": SearchSamplingFeatureItemsWidget(),
+            "datastreams": SearchDataStreamItemsWidget(),
         }
         self.resource_types_tw.clear()
         for name, page in self.resource_type_pages.items():

@@ -139,8 +139,6 @@ def dispatch_network_search_request(
         query_items = {
             **(search_query.query or {})
         }
-        if current_connection.use_f_query_param:
-            query_items["f"] = "geojson"
         if len(query_items) > 0:
             request_query.setQueryItems(list(query_items.items()))
         request_url =QtCore.QUrl(f"{current_connection.base_url}{search_query.path}")

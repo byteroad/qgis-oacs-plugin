@@ -118,7 +118,12 @@ class Link:
 
     @classmethod
     def from_api_response(cls, response_content: dict) -> "Link":
-        return cls(**response_content)
+        return cls(
+            href=response_content["href"],
+            rel=response_content.get("rel"),
+            type=response_content.get("type"),
+            title=response_content.get("title"),
+        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -223,13 +228,14 @@ class ClientSearchParams:
 
 class OacsFeatureProtocol(typing.Protocol):
     name: str
-    uid: str
-    feature_type: str
-    feature_type_icon_path: str
+    summary: str
+    icon_tooltip: str
+    icon_path: str
     collection_search_url_fragment: str
+    f_parameter_value: str
 
     @classmethod
-    def from_geojson_api_response(cls, response_content: dict) -> "OacsFeatureProtocol": ...
+    def from_api_response(cls, response_content: dict) -> "OacsFeatureProtocol": ...
 
     def get_renderable_properties(self) -> dict[str, str]: ...
 
@@ -239,7 +245,7 @@ class OacsFeatureProtocol(typing.Protocol):
 @dataclasses.dataclass(frozen=True)
 class System:
     id_: str
-    _feature_type: SystemType
+    feature_type: SystemType
     uid: str
     name: str
     asset_type: AssetType | None
@@ -252,21 +258,26 @@ class System:
     additional_properties: dict[str, str] | None = None
 
     collection_search_url_fragment: str = "/systems"
+    f_parameter_value = "geojson"
 
     @property
-    def feature_type(self) -> str:
-        return self._feature_type.name
+    def icon_path(self) -> str:
+        return self.feature_type.get_icon_path()
 
     @property
-    def feature_type_icon_path(self) -> str:
-        return self._feature_type.get_icon_path()
+    def icon_tooltip(self) -> str:
+        return self.feature_type.value.upper()
+
+    @property
+    def summary(self) -> str:
+        return self.uid
 
     @classmethod
-    def from_geojson_api_response(cls, response_content: dict) -> "System":
+    def from_api_response(cls, response_content: dict) -> "System":
         properties = dict(response_content["properties"])
         return cls(
             id_=response_content["id"],
-            _feature_type=SystemType.from_api_response(properties.pop("featureType")),
+            feature_type=SystemType.from_api_response(properties.pop("featureType")),
             uid=properties.pop("uid"),
             name=properties.pop("name"),
             asset_type=(
@@ -304,7 +315,7 @@ class System:
         return {
             "Name": self.name,
             "UID": self.uid,
-            "Feature Type": self._feature_type.name.upper(),
+            "Feature Type": self.feature_type.name.upper(),
             "Asset Type": self.asset_type.name.upper() if self.asset_type else "Unknown",
             "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
             **{k.capitalize(): str(v) for k, v in self.additional_properties.items()}
@@ -346,15 +357,25 @@ class SamplingFeature:
     description: str | None = None
     links: list[Link] = dataclasses.field(default_factory=list)
     additional_properties: dict[str, str] | None = None
+
     collection_search_url_fragment: str = "/samplingFeatures"
+    f_parameter_value = "geojson"
 
     @property
-    def feature_type_icon_path(self) -> str:
+    def icon_path(self) -> str:
         return IconPath.sampling_feature
+
+    @property
+    def icon_tooltip(self) -> str:
+        return self.feature_type
+
+    @property
+    def summary(self) -> str:
+        return self.uid
 
     # TODO: Check required and optional properties
     @classmethod
-    def from_geojson_api_response(cls, response_content: dict) -> "SamplingFeature":
+    def from_api_response(cls, response_content: dict) -> "SamplingFeature":
         properties = dict(response_content["properties"])
         return cls(
             id_=response_content["id"],
@@ -416,21 +437,160 @@ class SamplingFeature:
         return [link for link in self.links if link.rel in relevant_link_rels]
 
 
+class DataStreamType(enum.Enum):
+    STATUS = "status"
+    OBSERVATION = "observation"
+
+    def get_icon_path(self) -> str:
+        return {
+            self.STATUS: IconPath.datastream_type_status,
+            self.OBSERVATION: IconPath.datastream_type_observation,
+        }.get(self, IconPath.datastream)
+
+
+class DataStreamResultType(enum.Enum):
+    MEASURE = "measure"
+    VECTOR = "vector"
+    RECORD = "record"
+    COVERAGE = "coverage"
+    COMPLEX = "complex"
+
+    def get_icon_path(self) -> str:
+        return {
+            self.MEASURE: IconPath.system_type_sensor,
+            self.VECTOR: IconPath.system_type_sensor,
+            self.RECORD: IconPath.system_type_sensor,
+            self.COVERAGE: IconPath.system_type_sensor,
+            self.COMPLEX: IconPath.system_type_sensor,
+        }.get(self, IconPath.system_type_sensor)
+
+
+@dataclasses.dataclass(frozen=True)
+class ObservationSchemaJson:
+    parameters_schema: dict  # not modeling this, for now
+    result_schema: dict  # not modeling this, for now
+    title: str
+    format_: str = "application/json"
+    result_link_media_type: str | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class DataStreamObservedProperty:
+    definition: str | None = None
+    label: str | None = None
+    description: str | None = None
+
+    @classmethod
+    def from_api_response(cls, response_content: dict) -> "DataStreamObservedProperty":
+        return cls(**response_content)
+
+
+@dataclasses.dataclass(frozen=True)
+class DataStream:
+    id_: str
+    name: str
+    formats: list[str]
+    system_link: Link
+    observed_properties: list[DataStreamObservedProperty] | None = None
+    phenomenon_time: TimePeriod | None = None
+    result_time: TimePeriod | None = None
+    result_type: DataStreamResultType | None = None
+    live: bool = False
+    description: str | None = None
+    validTime: TimePeriod | None = None
+    datastream_type: DataStreamType | None = None
+    phenomenon_interval: str | None = None
+    result_time_interval: str | None = None
+    output_name: str | None = None
+    procedure_link: Link | None = None
+    deployment_link: Link | None = None
+    feature_of_interest_link: Link | None = None
+    sampling_feature_link: Link | None = None
+    schema: ObservationSchemaJson | None = None
+
+    collection_search_url_fragment: str = "/datastreams"
+    f_parameter_value = "json"
+
+    @property
+    def icon_path(self) -> str:
+        return self.datastream_type.get_icon_path() if self.datastream_type else IconPath.datastream
+
+    @property
+    def icon_tooltip(self) -> str:
+        return self.datastream_type.value.upper() if self.datastream_type else "DATASTREAM"
+
+    @property
+    def summary(self) -> str:
+        return self.description or ""
+
+    @classmethod
+    def from_api_response(cls, response_content: dict) -> "DataStream":
+        return cls(
+            id_=response_content["id"],
+            name=response_content["name"],
+            formats=response_content["formats"],
+            system_link=Link.from_api_response(response_content["system@link"]),
+            observed_properties=[
+                DataStreamObservedProperty.from_api_response(prop)
+                for prop in raw_observed_props
+            ] if (raw_observed_props := response_content.get("observedProperties")) else None,
+            phenomenon_time=(
+                TimePeriod.from_api_response(phen_time)
+                if (phen_time:=response_content.get("phenomenonTime")) else None
+            ),
+            result_time=(
+                TimePeriod.from_api_response(result_time)
+                if (result_time:=response_content.get("resultTime")) else None
+            ),
+            result_type=DataStreamResultType(response_content["resultType"]),
+            live=response_content.get("live", False),
+            description=response_content.get("description"),
+            datastream_type=DataStreamType(ds_type) if (ds_type :=response_content.get("type")) else None,
+            phenomenon_interval=response_content.get("phenomenonInterval"),
+            result_time_interval=response_content.get("resultTimeInterval"),
+            output_name=response_content.get("outputName"),
+            procedure_link=(
+                Link.from_api_response(procedure_raw_link)
+                if (procedure_raw_link := response_content.get("procedure@link")) else None
+            ),
+            deployment_link=(
+                Link.from_api_response(deployment_raw_link)
+                if (deployment_raw_link := response_content.get("deployment@link")) else None
+            ),
+            feature_of_interest_link=(
+                Link.from_api_response(foi_raw_link)
+                if (foi_raw_link := response_content.get("featureOfInterest@link")) else None
+            ),
+            sampling_feature_link=(
+                Link.from_api_response(sampling_feat_raw_link)
+                if (sampling_feat_raw_link := response_content.get("samplingFeature@link")) else None
+            ),
+            schema=None,
+        )
+
+    def get_renderable_properties(self) -> dict[str, str]:
+        return {
+            "Name": self.name,
+            "Formats": ", ".join(format_ for format_ in self.formats),
+        }
+
+    def get_relevant_links(self) -> list[Link]:
+        return []
+
+
 @dataclasses.dataclass(frozen=True)
 class SystemList:
     items: list[System]
 
     @classmethod
-    def from_geojson_api_response(cls, response_content: dict) -> "SystemList":
+    def from_api_response(cls, response_content: dict) -> "SystemList":
         items = []
         for raw_system in response_content.get("features", []):
             try:
-                items.append(System.from_geojson_api_response(raw_system))
+                items.append(System.from_api_response(raw_system))
             except ValueError as err:
                 log_message(f"Could not parse {raw_system!r} - {str(err)}")
-        return cls(
-            items=items
-        )
+        return cls(items=items)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -438,13 +598,27 @@ class SamplingFeatureList:
     items: list[SamplingFeature]
 
     @classmethod
-    def from_geojson_api_response(cls, response_content: dict) -> "SamplingFeatureList":
+    def from_api_response(cls, response_content: dict) -> "SamplingFeatureList":
         items = []
         for raw in response_content.get("features", []):
             try:
-                items.append(SamplingFeature.from_geojson_api_response(raw))
+                items.append(SamplingFeature.from_api_response(raw))
             except ValueError as err:
                 log_message(f"Could not parse {raw!r} - {str(err)}")
-        return cls(
-            items=items
-        )
+        return cls(items=items)
+
+
+@dataclasses.dataclass(frozen=True)
+class DataStreamList:
+    items: list[DataStream]
+    links: list[Link] | None = None
+
+    @classmethod
+    def from_api_response(cls, response_content: dict) -> "DataStreamList":
+        items = []
+        for raw_item in response_content["items"]:
+            try:
+                items.append(DataStream.from_api_response(raw_item))
+            except ValueError as err:
+                log_message(f"Could not parse {raw_item!r} - {str(err)}")
+        return cls(items=items)

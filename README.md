@@ -41,12 +41,15 @@ https://developers.google.com/fonts/docs/material_symbols#licensing
 
 List of Google material icons used:
 
+- [Circle](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:circle:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=circle&icon.size=24&icon.color=%231f1f1f)
+- [Eye Tracking](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:eye_tracking:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=measurement&icon.size=24&icon.color=%231f1f1f)
 - [Graph 3](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:graph_3:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=node&icon.size=24&icon.color=%231f1f1f)
 - [Labs](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:labs:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=sampl&icon.size=24&icon.color=%231f1f1f)
 - [Lab Panel](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:lab_panel:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=sample&icon.size=24&icon.color=%231f1f1f)
 - [Manufacturing](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:manufacturing:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=machine&icon.size=24&icon.color=%231f1f1f)
 - [Search](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:search:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=search&icon.size=24&icon.color=%231f1f1f)
 - [Sensors Krx](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:sensors_krx:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=machine&icon.size=24&icon.color=%231f1f1f)
+- [Stream](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:stream:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=data+stream&icon.size=24&icon.color=%231f1f1f)
 - [Stadia Controller](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:stadia_controller:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=control&icon.size=24&icon.color=%231f1f1f)
 - [Tools Ladder](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:tools_ladder:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=construct&icon.size=24&icon.color=%231f1f1f)
 

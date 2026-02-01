@@ -19,17 +19,11 @@ from ..constants import IconPath
 from ..settings import settings_manager
 from .list_item_widgets import ListItemWidget
 
-SearchSamplingFeatureItemsWidgetUi, _ = loadUiType(
-    Path(__file__).parents[1] / "ui/search_sampling_feature_items_widget.ui")
+SearchDataStreamItemsWidgetUi, _ = loadUiType(
+    Path(__file__).parents[1] / "ui/search_datastream_items_widget.ui")
 
 
-class ResourceCollectionRetrieverProtocol(typing.Protocol):
-    search_started: QtCore.pyqtSignal
-    search_ended: QtCore.pyqtSignal
-    search_results_layout: QtWidgets.QLayout
-
-
-class SearchSamplingFeatureItemsWidget(QtWidgets.QWidget, SearchSamplingFeatureItemsWidgetUi):
+class SearchDataStreamItemsWidget(QtWidgets.QWidget, SearchDataStreamItemsWidgetUi):
     free_text_le: QtWidgets.QLineEdit
     search_pb: QtWidgets.QPushButton
     search_results_layout: QtWidgets.QVBoxLayout
@@ -75,12 +69,12 @@ class SearchSamplingFeatureItemsWidget(QtWidgets.QWidget, SearchSamplingFeatureI
         else:
             response_payload = network_fetcher_task.contentAsString()
             # utils.log_message(response_payload)
-            sampling_feature_list = models.SamplingFeatureList.from_api_response(
+            datastream_list = models.DataStreamList.from_api_response(
                 json.loads(response_payload))
 
-            for sampling_feature_item in sampling_feature_list.items:
+            for datastream_item in datastream_list.items:
                 display_widget = ListItemWidget(
-                    resource=sampling_feature_item)
+                    resource=datastream_item)
                 self.search_results_layout.addWidget(display_widget)
             self.search_results_layout.addStretch()
             self.search_ended.emit()
@@ -89,7 +83,7 @@ class SearchSamplingFeatureItemsWidget(QtWidgets.QWidget, SearchSamplingFeatureI
         query = {
             "q": raw_q if (raw_q := self.free_text_le.text()) != "" else None,
             "f": (
-                models.SamplingFeature.f_parameter_value
+                models.DataStream.f_parameter_value
                 if settings_manager.get_current_data_source_connection().use_f_query_param
                 else None
             )
@@ -97,6 +91,6 @@ class SearchSamplingFeatureItemsWidget(QtWidgets.QWidget, SearchSamplingFeatureI
         query = {k: v for k, v in query.items() if v is not None} or None
 
         return models.ClientSearchParams(
-            path=models.SamplingFeature.collection_search_url_fragment,
+            path=models.DataStream.collection_search_url_fragment,
             query=query,
         )

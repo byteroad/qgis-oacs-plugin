@@ -10,6 +10,7 @@ from qgis.PyQt import (
     QtNetwork,
     QtWidgets,
 )
+from rich.jupyter import display
 
 from .. import (
     constants,
@@ -52,20 +53,21 @@ class ListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
         self._already_fetched_details = False
         target_size = 30
         scaled_pixmap = utils.create_pixmap_from_svg(
-            self.resource.feature_type_icon_path, target_size)
+            self.resource.icon_path, target_size)
         self.icon_la.setPixmap(scaled_pixmap)
-        self.icon_la.setToolTip(self.resource.feature_type)
+        self.icon_la.setToolTip(self.resource.icon_tooltip)
         self.icon_la.setFixedSize(target_size, target_size)
         self.name_la.setText(f"<h3>{self.resource.name}</h3>")
         self.name_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
         description_contents = """
             <p>{uid}</p>
         """.format(
-            uid=self.resource.uid,
+            uid=self.resource.summary,
         )
         self.description_la.setText(description_contents)
         self.description_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
         self.details_pb.clicked.connect(self.toggle_details)
+        self.load_pb.clicked.connect(self.load_as_layer)
 
     def toggle_details(self) -> None:
         if self.details_frame.isVisible():
@@ -78,13 +80,19 @@ class ListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
                 log_message(f"About to fetch details from the server...")
                 self.initiate_fetch_details()
 
+    def load_as_layer(self):
+        if self._already_fetched_details:
+            ...
+        else:
+            ...
+
     def initiate_fetch_details(self) -> None:
         current_connection = settings_manager.get_current_data_source_connection()
         request_url =QtCore.QUrl(
-            f"{current_connection.base_url}/{self.resource.collection_search_url_fragment}/{self.resource.id_}")
+            f"{current_connection.base_url}{self.resource.collection_search_url_fragment}/{self.resource.id_}")
         if current_connection.use_f_query_param:
             request_query = QtCore.QUrlQuery()
-            query_items = {"f": "geojson"}
+            query_items = {"f": self.resource.f_parameter_value}
             request_query.setQueryItems(list(query_items.items()))
             request_url.setQuery(request_query)
         request = QtNetwork.QNetworkRequest(request_url)
@@ -111,7 +119,7 @@ class ListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
             utils.log_message(f"Connection error (error_code: {reply.error()})")
         else:
             response_payload = network_fetcher_task.contentAsString()
-            detailed_resource = self.resource.from_geojson_api_response(
+            detailed_resource = self.resource.from_api_response(
                 json.loads(response_payload)
             )
             log_message(f"{response_payload=}")
@@ -204,8 +212,10 @@ class ExpandableSection(QtWidgets.QFrame):
         """Load content from the link. Override or connect to this method."""
         self.content_loaded = True
         if self.link.rel in (
-                constants.LinkRelation.sampling_features,
-                constants.OgcLinkRelation.sampling_features
+            constants.LinkRelation.sampling_features,
+            constants.OgcLinkRelation.sampling_features,
+            constants.LinkRelation.data_streams,
+            constants.OgcLinkRelation.data_streams,
         ):
             utils.dispatch_network_search_request(
                 search_query=self.link.href,
@@ -219,15 +229,20 @@ class ExpandableSection(QtWidgets.QFrame):
         if reply and reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
             utils.log_message(f"Connection error (error_code: {reply.error()})")
         else:
-            response_payload = network_fetcher_task.contentAsString()
+            response_payload = json.loads(network_fetcher_task.contentAsString())
             if self.link.rel in (
-                    constants.LinkRelation.sampling_features,
-                    constants.OgcLinkRelation.sampling_features
+                constants.LinkRelation.sampling_features,
+                constants.OgcLinkRelation.sampling_features
             ):
                 self.render_related_sampling_features(
-                    models.SamplingFeatureList.from_geojson_api_response(
-                        json.loads(response_payload)
-                    )
+                    models.SamplingFeatureList.from_api_response(response_payload)
+                )
+            elif self.link.rel in (
+                constants.LinkRelation.data_streams,
+                constants.OgcLinkRelation.data_streams,
+            ):
+                self.render_related_datastreams(
+                    models.DataStreamList.from_api_response(response_payload)
                 )
             else:
                 ...  # not implemented yet
@@ -235,6 +250,12 @@ class ExpandableSection(QtWidgets.QFrame):
     def render_related_sampling_features(self, sampling_feature_list: models.SamplingFeatureList) -> None:
         for sampling_feature_item in sampling_feature_list.items:
             display_widget = ListItemWidget(resource=sampling_feature_item)
+            self.content_layout.addWidget(display_widget)
+        self.content_layout.addStretch()
+
+    def render_related_datastreams(self, datastream_list: models.DataStreamList) -> None:
+        for datastream_item in datastream_list.items:
+            display_widget = ListItemWidget(resource=datastream_item)
             self.content_layout.addWidget(display_widget)
         self.content_layout.addStretch()
 
