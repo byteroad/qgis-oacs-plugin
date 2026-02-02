@@ -10,8 +10,9 @@ from qgis.PyQt import (
 )
 from qgis.PyQt.uic import loadUiType
 
-from ..settings import settings_manager
 from .. import utils
+from ..client import OacsClient
+from ..settings import settings_manager
 from .search_datastream_items_widget import SearchDataStreamItemsWidget
 from .search_sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
 from .search_system_items_widget import SearchSystemItemsWidget
@@ -36,6 +37,8 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
     _connection_controls: tuple[QtWidgets.QWidget, ...]
     _interactive_widgets: tuple[QtWidgets.QWidget, ...]
 
+    oacs_client: OacsClient
+
     def __init__(
             self,
             parent: QtWidgets.QWidget | None = None,
@@ -44,6 +47,7 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
     ):
         super().__init__(parent, fl, widget_mode)
         self.setupUi(self)
+        self.oacs_client = OacsClient()
 
         self.grid_layout = QtWidgets.QGridLayout()
         self.message_bar = qgis.gui.QgsMessageBar()
@@ -56,17 +60,16 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
         self.layout().insertLayout(4, self.grid_layout)
 
         self.resource_type_pages = {
-            "systems": SearchSystemItemsWidget(),
-            "sampling features": SearchSamplingFeatureItemsWidget(),
-            "datastreams": SearchDataStreamItemsWidget(),
+            "systems": SearchSystemItemsWidget(self.oacs_client),
+            "sampling features": SearchSamplingFeatureItemsWidget(self.oacs_client),
+            "datastreams": SearchDataStreamItemsWidget(self.oacs_client),
         }
         self.resource_types_tw.clear()
         for name, page in self.resource_type_pages.items():
             self.resource_types_tw.addTab(page, name.capitalize())
 
-        for tab_page_widget in self.resource_type_pages.values():
-            tab_page_widget.search_started.connect(self.handle_search_started)
-            tab_page_widget.search_ended.connect(self.handle_search_ended)
+        self.oacs_client.request_started.connect(self.handle_search_started)
+        self.oacs_client.request_ended.connect(self.handle_search_ended)
 
         self._connection_controls = (
             self.connection_list_cmb,

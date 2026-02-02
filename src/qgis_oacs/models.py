@@ -589,7 +589,10 @@ class SystemList:
             try:
                 items.append(System.from_api_response(raw_system))
             except ValueError as err:
-                log_message(f"Could not parse {raw_system!r} - {str(err)}")
+                log_message(
+                    f"Could not parse {raw_system!r} - {str(err)}",
+                    level=qgis.core.Qgis.MessageLevel.Warning
+                )
         return cls(items=items)
 
 
