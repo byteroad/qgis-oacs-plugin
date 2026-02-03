@@ -13,6 +13,7 @@ from qgis.PyQt import (
 
 from . import models
 from . import settings
+from .constants import LinkRelation, OgcLinkRelation
 from .utils import log_message
 
 
@@ -35,12 +36,12 @@ class OacsClient(QtCore.QObject):
     request_started = QtCore.pyqtSignal(OacsRequestMetadata)
     request_ended = QtCore.pyqtSignal(OacsRequestMetadata)
     request_failed = QtCore.pyqtSignal(OacsRequestMetadata, str)
-    system_list_fetched = QtCore.pyqtSignal(models.SystemList)
-    system_item_fetched = QtCore.pyqtSignal(models.System)
-    sampling_feature_list_fetched = QtCore.pyqtSignal(models.SamplingFeatureList)
-    sampling_feature_item_fetched = QtCore.pyqtSignal(models.SamplingFeature)
-    datastream_list_fetched = QtCore.pyqtSignal(models.DataStreamList)
-    datastream_item_fetched = QtCore.pyqtSignal(models.DataStream)
+    system_list_fetched = QtCore.pyqtSignal(models.SystemList, OacsRequestMetadata)
+    system_item_fetched = QtCore.pyqtSignal(models.System, OacsRequestMetadata)
+    sampling_feature_list_fetched = QtCore.pyqtSignal(models.SamplingFeatureList, OacsRequestMetadata)
+    sampling_feature_item_fetched = QtCore.pyqtSignal(models.SamplingFeature, OacsRequestMetadata)
+    datastream_list_fetched = QtCore.pyqtSignal(models.DataStreamList, OacsRequestMetadata)
+    datastream_item_fetched = QtCore.pyqtSignal(models.DataStream, OacsRequestMetadata)
 
     def initiate_system_list_search(
             self,
@@ -197,6 +198,60 @@ class OacsClient(QtCore.QObject):
         self.request_started.emit(meta)
         return meta
 
+    def initiate_request_from_link(
+            self,
+            link: models.Link,
+            connection: settings.DataSourceConnectionSettings
+    ) -> OacsRequestMetadata | None:
+        """Initiate a request using a Link object from an API response."""
+        rel_config = {
+            LinkRelation.sampling_features: (
+                RequestType.SAMPLING_FEATURE_LIST,
+                models.SamplingFeatureList.from_api_response,
+                self.sampling_feature_list_fetched,
+                {"Accept": "application/geo+json"},
+            ),
+            OgcLinkRelation.sampling_features: (
+                RequestType.SAMPLING_FEATURE_LIST,
+                models.SamplingFeatureList.from_api_response,
+                self.sampling_feature_list_fetched,
+                {"Accept": "application/geo+json"},
+            ),
+            LinkRelation.data_streams: (
+                RequestType.DATASTREAM_LIST,
+                models.DataStreamList.from_api_response,
+                self.datastream_list_fetched,
+                {"Accept": "application/json"},
+            ),
+            OgcLinkRelation.data_streams: (
+                RequestType.DATASTREAM_LIST,
+                models.DataStreamList.from_api_response,
+                self.datastream_list_fetched,
+                {"Accept": "application/json"},
+            ),
+        }
+        config = rel_config.get(link.rel)
+        if config is None:
+            log_message(f"Unsupported link relation: {link.rel}")
+            return None
+        request_type, parser, signal, headers = config
+        meta = OacsRequestMetadata(request_type=request_type)
+        self.dispatch_network_request(
+            search_params=models.ClientSearchParams(
+                url_or_relative_path=link.href,
+                headers=headers,
+            ),
+            connection=connection,
+            task_metadata=meta,
+            response_handler=functools.partial(
+                self.handle_network_response,
+                parser=parser,
+                to_emit=signal,
+            ),
+        )
+        self.request_started.emit(meta)
+        return meta
+
     def handle_network_response(
             self,
             response: qgis.core.QgsNetworkContentFetcherTask,
@@ -219,7 +274,7 @@ class OacsClient(QtCore.QObject):
             else:
                 response_payload = response.contentAsString()
                 parsed_payload = parser(json.loads(response_payload))
-                to_emit.emit(parsed_payload)
+                to_emit.emit(parsed_payload, task_metadata)
         except json.JSONDecodeError as err:
             error_message = f"Could not parse response to JSON: {str(err)}"
             log_message(error_message)
@@ -233,24 +288,6 @@ class OacsClient(QtCore.QObject):
         finally:
             self.request_ended.emit(task_metadata)
 
-    @typing.overload
-    def dispatch_network_request(
-            self,
-            search_params: models.ClientSearchParams,
-            connection: settings.DataSourceConnectionSettings,
-            task_metadata: OacsRequestMetadata,
-            response_handler: typing.Callable[[qgis.core.QgsNetworkContentFetcherTask], None]
-    ) -> None: ...
-
-    @typing.overload
-    def dispatch_network_request(
-            self,
-            search_params: str,
-            connection: settings.DataSourceConnectionSettings,
-            task_metadata: OacsRequestMetadata,
-            response_handler: typing.Callable[[qgis.core.QgsNetworkContentFetcherTask], None]
-    ) -> None: ...
-
     def dispatch_network_request(
             self,
             search_params: models.ClientSearchParams,
@@ -259,26 +296,25 @@ class OacsClient(QtCore.QObject):
             response_handler: typing.Callable[
                 [qgis.core.QgsNetworkContentFetcherTask], None]
     ) -> None:
-        if isinstance(search_params, str):
-            request_url = QtCore.QUrl(search_params)
-            request = QtNetwork.QNetworkRequest(request_url)
-            request.setRawHeader(b"Accept", b"application/json")
+        request_query = QtCore.QUrlQuery()
+        query_items = {
+            **(search_params.query or {})
+        }
+        if len(query_items) > 0:
+            request_query.setQueryItems(list(query_items.items()))
+        if search_params.url_or_relative_path.startswith("/"):
+            request_url = QtCore.QUrl(
+                f"{connection.base_url}{search_params.url_or_relative_path}")
         else:
-            request_query = QtCore.QUrlQuery()
-            query_items = {
-                **(search_params.query or {})
-            }
-            if len(query_items) > 0:
-                request_query.setQueryItems(list(query_items.items()))
-            request_url = QtCore.QUrl(f"{connection.base_url}{search_params.path}")
-            if not request_query.isEmpty():
-                request_url.setQuery(request_query)
-            request = QtNetwork.QNetworkRequest(request_url)
-            for header_name, header_value in search_params.headers.items():
-                request.setRawHeader(
-                    header_name.capitalize().encode(),
-                    header_value.encode()
-                )
+            request_url = QtCore.QUrl(f"{search_params.url_or_relative_path}")
+        if not request_query.isEmpty():
+            request_url.setQuery(request_query)
+        request = QtNetwork.QNetworkRequest(request_url)
+        for header_name, header_value in search_params.headers.items():
+            request.setRawHeader(
+                header_name.capitalize().encode(),
+                header_value.encode()
+            )
         api_request_task = qgis.core.QgsNetworkContentFetcherTask(
             request=request,
             authcfg=connection.auth_config,
@@ -292,3 +328,6 @@ class OacsClient(QtCore.QObject):
             target_task_metadata=task_metadata
         )
         api_request_task.fetched.connect(handler)
+
+
+oacs_client = OacsClient()

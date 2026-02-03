@@ -11,7 +11,7 @@ from qgis.PyQt import (
 from qgis.PyQt.uic import loadUiType
 
 from .. import utils
-from ..client import OacsClient
+from ..client import oacs_client
 from ..settings import settings_manager
 from .search_datastream_items_widget import SearchDataStreamItemsWidget
 from .search_sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
@@ -28,16 +28,11 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
     connection_remove_btn: QtWidgets.QPushButton
     resource_types_tw: QtWidgets.QTabWidget
     resource_type_pages: dict[str, QtWidgets.QWidget]
-    resource_type_datastream_page: SearchDataStreamItemsWidget
-    resource_type_system_page: SearchSystemItemsWidget
-    resource_type_sampling_feature_page: SearchSamplingFeatureItemsWidget
     button_box: QtWidgets.QDialogButtonBox
     message_bar: qgis.gui.QgsMessageBar
 
     _connection_controls: tuple[QtWidgets.QWidget, ...]
     _interactive_widgets: tuple[QtWidgets.QWidget, ...]
-
-    oacs_client: OacsClient
 
     def __init__(
             self,
@@ -47,7 +42,6 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
     ):
         super().__init__(parent, fl, widget_mode)
         self.setupUi(self)
-        self.oacs_client = OacsClient()
 
         self.grid_layout = QtWidgets.QGridLayout()
         self.message_bar = qgis.gui.QgsMessageBar()
@@ -60,16 +54,16 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
         self.layout().insertLayout(4, self.grid_layout)
 
         self.resource_type_pages = {
-            "systems": SearchSystemItemsWidget(self.oacs_client),
-            "sampling features": SearchSamplingFeatureItemsWidget(self.oacs_client),
-            "datastreams": SearchDataStreamItemsWidget(self.oacs_client),
+            "systems": SearchSystemItemsWidget(),
+            "sampling features": SearchSamplingFeatureItemsWidget(),
+            "datastreams": SearchDataStreamItemsWidget(),
         }
         self.resource_types_tw.clear()
         for name, page in self.resource_type_pages.items():
             self.resource_types_tw.addTab(page, name.capitalize())
 
-        self.oacs_client.request_started.connect(self.handle_search_started)
-        self.oacs_client.request_ended.connect(self.handle_search_ended)
+        oacs_client.request_started.connect(self.handle_search_started)
+        oacs_client.request_ended.connect(self.handle_search_ended)
 
         self._connection_controls = (
             self.connection_list_cmb,
@@ -147,10 +141,10 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
             utils.clear_search_results(widget_page.search_results_layout)
 
     def handle_search_started(self):
-        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=True)
+        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=False)
 
     def handle_search_ended(self):
-        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=False)
+        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=True)
 
     def _spawn_data_source_connection_deletion_dialog(self, connection_name: str):
         message = f"Remove connection {connection_name!r}?"
