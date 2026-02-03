@@ -220,13 +220,14 @@ class Conformance:
 
 @dataclasses.dataclass(frozen=True)
 class ClientSearchParams:
-    path: str
+    url_or_relative_path: str
     query: dict[str, str | float | int | bool | list[str | float | int | bool]] | None = None
     headers: dict[str, str] | None = None
     body: bytes | None = None
 
 
 class OacsFeatureProtocol(typing.Protocol):
+    id_: str
     name: str
     summary: str
     icon_tooltip: str
@@ -589,7 +590,10 @@ class SystemList:
             try:
                 items.append(System.from_api_response(raw_system))
             except ValueError as err:
-                log_message(f"Could not parse {raw_system!r} - {str(err)}")
+                log_message(
+                    f"Could not parse {raw_system!r} - {str(err)}",
+                    level=qgis.core.Qgis.MessageLevel.Warning
+                )
         return cls(items=items)
 
 

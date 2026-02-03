@@ -10,8 +10,9 @@ from qgis.PyQt import (
 )
 from qgis.PyQt.uic import loadUiType
 
-from ..settings import settings_manager
 from .. import utils
+from ..client import oacs_client
+from ..settings import settings_manager
 from .search_datastream_items_widget import SearchDataStreamItemsWidget
 from .search_sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
 from .search_system_items_widget import SearchSystemItemsWidget
@@ -27,9 +28,6 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
     connection_remove_btn: QtWidgets.QPushButton
     resource_types_tw: QtWidgets.QTabWidget
     resource_type_pages: dict[str, QtWidgets.QWidget]
-    resource_type_datastream_page: SearchDataStreamItemsWidget
-    resource_type_system_page: SearchSystemItemsWidget
-    resource_type_sampling_feature_page: SearchSamplingFeatureItemsWidget
     button_box: QtWidgets.QDialogButtonBox
     message_bar: qgis.gui.QgsMessageBar
 
@@ -64,9 +62,8 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
         for name, page in self.resource_type_pages.items():
             self.resource_types_tw.addTab(page, name.capitalize())
 
-        for tab_page_widget in self.resource_type_pages.values():
-            tab_page_widget.search_started.connect(self.handle_search_started)
-            tab_page_widget.search_ended.connect(self.handle_search_ended)
+        oacs_client.request_started.connect(self.handle_search_started)
+        oacs_client.request_ended.connect(self.handle_search_ended)
 
         self._connection_controls = (
             self.connection_list_cmb,
@@ -144,10 +141,10 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
             utils.clear_search_results(widget_page.search_results_layout)
 
     def handle_search_started(self):
-        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=True)
+        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=False)
 
     def handle_search_ended(self):
-        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=False)
+        utils.toggle_widgets_enabled(self._interactive_widgets, force_state=True)
 
     def _spawn_data_source_connection_deletion_dialog(self, connection_name: str):
         message = f"Remove connection {connection_name!r}?"

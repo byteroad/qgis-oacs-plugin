@@ -1,4 +1,3 @@
-import qgis.core
 from qgis.gui import (
     QgsGui,
     QgisInterface,
