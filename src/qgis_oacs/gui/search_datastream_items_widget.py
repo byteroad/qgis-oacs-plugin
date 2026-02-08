@@ -70,7 +70,11 @@ class SearchDataStreamItemsWidget(QtWidgets.QWidget, SearchDataStreamItemsWidget
             datastream_list: models.DataStreamList,
             request_metadata: OacsRequestMetadata
     ) -> None:
-        for datastream_item in datastream_list.items:
-            display_widget = DataStreamListItemWidget(datastream_item)
-            self.search_results_layout.addWidget(display_widget)
+        if len(datastream_list.items) == 0:
+            self.search_results_layout.addWidget(
+                QtWidgets.QLabel("No datastreams found"))
+        else:
+            for datastream_item in datastream_list.items:
+                display_widget = DataStreamListItemWidget(datastream_item)
+                self.search_results_layout.addWidget(display_widget)
         self.search_results_layout.addStretch()

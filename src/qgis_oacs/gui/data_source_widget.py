@@ -14,6 +14,7 @@ from .. import utils
 from ..client import oacs_client
 from ..settings import settings_manager
 from .search_datastream_items_widget import SearchDataStreamItemsWidget
+from .search_deployment_items_widget import SearchDeploymentItemsWidget
 from .search_sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
 from .search_system_items_widget import SearchSystemItemsWidget
 from .data_source_connection_dialog import DataSourceConnectionDialog
@@ -55,6 +56,7 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
 
         self.resource_type_pages = {
             "systems": SearchSystemItemsWidget(),
+            "deployments": SearchDeploymentItemsWidget(),
             "sampling features": SearchSamplingFeatureItemsWidget(),
             "datastreams": SearchDataStreamItemsWidget(),
         }

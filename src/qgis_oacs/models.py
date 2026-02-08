@@ -1,3 +1,4 @@
+import abc
 import datetime as dt
 import dataclasses
 import enum
@@ -118,6 +119,7 @@ class Link:
 
     @classmethod
     def from_api_response(cls, response_content: dict) -> "Link":
+        log_message(f"Processing link: {response_content=}")
         return cls(
             href=response_content["href"],
             rel=response_content.get("rel"),
@@ -243,83 +245,108 @@ class OacsFeatureProtocol(typing.Protocol):
     def get_relevant_links(self) -> list[Link]: ...
 
 
-@dataclasses.dataclass(frozen=True)
-class System:
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class OacsFeature(abc.ABC):
     id_: str
-    feature_type: SystemType
     uid: str
     name: str
-    asset_type: AssetType | None
-    valid_time: TimePeriod
-    system_kind_link: Link
+    feature_type: str | None = None
+    description: str | None = None
     geometry: qgis.core.QgsReferencedGeometry | None = None
     bbox: qgis.core.QgsReferencedRectangle | None = None
-    description: str | None = None
     links: list[Link] = dataclasses.field(default_factory=list)
     additional_properties: dict[str, str] | None = None
 
-    collection_search_url_fragment: str = "/systems"
-    f_parameter_value = "geojson"
-
-    @property
-    def icon_path(self) -> str:
-        return self.feature_type.get_icon_path()
-
-    @property
-    def icon_tooltip(self) -> str:
-        return self.feature_type.value.upper()
-
-    @property
-    def summary(self) -> str:
-        return self.uid
-
     @classmethod
-    def from_api_response(cls, response_content: dict) -> "System":
-        properties = dict(response_content["properties"])
-        return cls(
-            id_=response_content["id"],
-            feature_type=SystemType.from_api_response(properties.pop("featureType")),
-            uid=properties.pop("uid"),
-            name=properties.pop("name"),
-            asset_type=(
-                AssetType.from_api_response(raw_asset_type)
-                if (raw_asset_type := properties.pop("assetType", None))
-                else None
-            ),
-            valid_time=(
-                TimePeriod.from_api_response(raw_valid_time)
-                if (raw_valid_time := properties.pop("validTime", None))
-                else None
-            ),
-            system_kind_link=(
-                Link.from_api_response(raw_system_kind)
-                if (raw_system_kind := properties.pop("systemKind@link", None))
-                else None
-            ),
-            geometry=qgis.core.QgsReferencedGeometry(
-                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_geometry)),
-                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
-            ) if (raw_geometry := response_content.get("geometry")) else None,
-            bbox=qgis.core.QgsReferencedGeometry(
-                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_bbox)),
-                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
-            ) if (raw_bbox := response_content.get("bbox")) else None,
-            description=properties.pop("description", None),
-            links=[
-                Link.from_api_response(raw_link)
-                for raw_link in response_content.get("links", [])
-            ],
-            additional_properties={k: str(v) for k, v in properties.items()}
-        )
+    @abc.abstractmethod
+    def from_api_response(cls, response_content: dict) -> "OacsFeature": ...
+
+    @abc.abstractmethod
+    def get_relevant_links(self) -> list[Link]: ...
 
     def get_renderable_properties(self) -> dict[str, str]:
         return {
             "Name": self.name,
             "UID": self.uid,
+            **{k.capitalize(): str(v) for k, v in self.additional_properties.items()}
+        }
+
+    @staticmethod
+    def _parse_api_response(
+            response_content: dict,
+            disregard_properties: typing.Sequence[str] | None = None
+    ) -> dict:
+        properties = dict(response_content["properties"])
+        return {
+            "id_": response_content["id"],
+            "uid": properties.pop("uid"),
+            "name": properties.pop("name"),
+            "feature_type": properties.pop("featureType", None),
+            "description": properties.pop("description", None),
+            "geometry": qgis.core.QgsReferencedGeometry(
+                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_geometry)),
+                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
+            ) if (raw_geometry := response_content.get("geometry")) else None,
+            "bbox": qgis.core.QgsReferencedGeometry(
+                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_bbox)),
+                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
+            ) if (raw_bbox := response_content.get("bbox")) else None,
+            "links": [
+                Link.from_api_response(raw_link)
+                for raw_link in response_content.get("links", [])
+            ],
+            "additional_properties": {
+                k: str(v) for k, v in properties.items()
+                if k not in (disregard_properties or [])
+            }
+        }
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class System(OacsFeature):
+    feature_type: SystemType | None
+    asset_type: AssetType | None
+    valid_time: TimePeriod
+    system_kind_link: Link
+
+    @classmethod
+    def from_api_response(cls, response_content: dict) -> "System":
+        common = cls._parse_api_response(
+            response_content,
+            disregard_properties=("assetType", "validTime", "systemKind@link")
+        )
+        return cls(
+            **{
+                **common,
+                "feature_type": (
+                    SystemType.from_api_response(raw_type)
+                    if (raw_type := response_content["properties"].get("featureType", None))
+                    else SystemType.SYSTEM
+                ),
+                "asset_type": (
+                    AssetType.from_api_response(raw_asset_type)
+                    if (raw_asset_type := response_content["properties"].get("assetType", None))
+                    else None
+                ),
+                "valid_time": (
+                    TimePeriod.from_api_response(raw_valid_time)
+                    if (raw_valid_time := response_content["properties"].get("validTime", None))
+                    else None
+                ),
+                "system_kind_link": (
+                    Link.from_api_response(raw_system_kind)
+                    if (raw_system_kind := response_content["properties"].get("systemKind@link", None))
+                    else None
+                ),
+            },
+        )
+
+    def get_renderable_properties(self) -> dict[str, str]:
+        return {
+            **super().get_renderable_properties(),
             "Feature Type": self.feature_type.name.upper(),
             "Asset Type": self.asset_type.name.upper() if self.asset_type else "Unknown",
             "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
-            **{k.capitalize(): str(v) for k, v in self.additional_properties.items()}
         }
 
     def get_relevant_links(self) -> list[Link]:
@@ -345,77 +372,105 @@ class System:
         return [link for link in self.links if link.rel in relevant_link_rels]
 
 
-@dataclasses.dataclass(frozen=True)
-class SamplingFeature:
-    id_: str
-    feature_type: str
-    uid: str
-    name: str
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class Deployment(OacsFeature):
     valid_time: TimePeriod
-    sampled_feature_link: Link
-    geometry: qgis.core.QgsReferencedGeometry | None = None
-    bbox: qgis.core.QgsReferencedRectangle | None = None
-    description: str | None = None
-    links: list[Link] = dataclasses.field(default_factory=list)
-    additional_properties: dict[str, str] | None = None
+    platform_link: Link | None = None
+    deployed_systems_link: list[Link] | None = None
 
-    collection_search_url_fragment: str = "/samplingFeatures"
-    f_parameter_value = "geojson"
-
-    @property
-    def icon_path(self) -> str:
-        return IconPath.sampling_feature
-
-    @property
-    def icon_tooltip(self) -> str:
-        return self.feature_type
-
-    @property
-    def summary(self) -> str:
-        return self.uid
-
-    # TODO: Check required and optional properties
     @classmethod
-    def from_api_response(cls, response_content: dict) -> "SamplingFeature":
-        properties = dict(response_content["properties"])
+    def from_api_response(cls, response_content: dict) -> "Deployment":
+        common = cls._parse_api_response(
+            response_content,
+            disregard_properties=("validTime", "platform@link", "deployedSystems@link")
+        )
+        try:
+            deployed_systems_link = [
+                Link.from_api_response(raw_system_link)
+                for raw_system_link in response_content["properties"].get("deployedSystems@link", [])
+            ]
+        except (TypeError, KeyError) as err:
+            deployed_systems_link = None
+            log_message(
+                f"Could not parse deployed systems links: {str(err)}",
+                level=qgis.core.Qgis.MessageLevel.Warning
+            )
         return cls(
-            id_=response_content["id"],
-            feature_type=properties.pop("featureType"),
-            uid=properties.pop("uid"),
-            name=properties.pop("name"),
+            **common,
             valid_time=(
                 TimePeriod.from_api_response(raw_valid_time)
-                if (raw_valid_time := properties.pop("validTime", None))
+                if (raw_valid_time := response_content["properties"].get("validTime", None))
                 else None
             ),
-            sampled_feature_link=(
+            platform_link=(
                 Link.from_api_response(raw_system_kind)
-                if (raw_system_kind := properties.pop("systemKind@link", None))
+                if (raw_system_kind := response_content["properties"].get("platform@link", None))
                 else None
             ),
-            geometry=qgis.core.QgsReferencedGeometry(
-                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_geometry)),
-                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
-            ) if (raw_geometry := response_content.get("geometry")) else None,
-            bbox=qgis.core.QgsReferencedGeometry(
-                geometry=qgis.core.QgsJsonUtils.geometryFromGeoJson(json.dumps(raw_bbox)),
-                crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
-            ) if (raw_bbox := response_content.get("bbox")) else None,
-            description=properties.pop("description", None),
-            links=[
-                Link.from_api_response(raw_link)
-                for raw_link in response_content.get("links", [])
-            ],
-            additional_properties={k: str(v) for k, v in properties.items()}
+            deployed_systems_link=deployed_systems_link
         )
 
     def get_renderable_properties(self) -> dict[str, str]:
         return {
-            "Name": self.name,
-            "UID": self.uid,
-            "Feature Type": self.feature_type.upper(),
+            **super().get_renderable_properties(),
+            "Feature Type": (self.feature_type or "deployment").upper(),
             "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
-            **{k.capitalize(): str(v) for k, v in self.additional_properties.items()}
+        }
+
+    def get_relevant_links(self) -> list[Link]:
+        relevant_link_rels = (
+            LinkRelation.platform,
+            LinkRelation.deployed_systems,
+            LinkRelation.sub_deployments,
+            LinkRelation.features_of_interest,
+            LinkRelation.sampling_features,
+            LinkRelation.data_streams,
+            LinkRelation.control_streams,
+            OgcLinkRelation.platform,
+            OgcLinkRelation.deployed_systems,
+            OgcLinkRelation.sub_deployments,
+            OgcLinkRelation.features_of_interest,
+            OgcLinkRelation.sampling_features,
+            OgcLinkRelation.data_streams,
+            OgcLinkRelation.control_streams,
+        )
+        # we look for both `rel=<name>` and `rel=ogc-rel:<name>` because of:
+        #
+        # https://github.com/opengeospatial/ogcapi-connected-systems/issues/173
+        #
+        return [link for link in self.links if link.rel in relevant_link_rels]
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class SamplingFeature(OacsFeature):
+    valid_time: TimePeriod
+    sampled_feature_link: Link
+
+    @classmethod
+    def from_api_response(cls, response_content: dict) -> "SamplingFeature":
+        common = cls._parse_api_response(
+            response_content,
+            disregard_properties=("validTime", "sampledFeature@link")
+        )
+        return cls(
+            **common,
+            valid_time=(
+                TimePeriod.from_api_response(raw_valid_time)
+                if (raw_valid_time := response_content["properties"].get("validTime", None))
+                else None
+            ),
+            sampled_feature_link=(
+                Link.from_api_response(raw_system_kind)
+                if (raw_system_kind := response_content["properties"].pop("sampledFeature@link", None))
+                else None
+            )
+        )
+
+    def get_renderable_properties(self) -> dict[str, str]:
+        return {
+            **super().get_renderable_properties(),
+            "Feature Type": (self.feature_type or "sampling_feature").upper(),
+            "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
         }
 
     def get_relevant_links(self) -> list[Link]:
@@ -509,21 +564,6 @@ class DataStream:
     sampling_feature_link: Link | None = None
     schema: ObservationSchemaJson | None = None
 
-    collection_search_url_fragment: str = "/datastreams"
-    f_parameter_value = "json"
-
-    @property
-    def icon_path(self) -> str:
-        return self.datastream_type.get_icon_path() if self.datastream_type else IconPath.datastream
-
-    @property
-    def icon_tooltip(self) -> str:
-        return self.datastream_type.value.upper() if self.datastream_type else "DATASTREAM"
-
-    @property
-    def summary(self) -> str:
-        return self.description or ""
-
     @classmethod
     def from_api_response(cls, response_content: dict) -> "DataStream":
         return cls(
@@ -579,37 +619,41 @@ class DataStream:
         return []
 
 
+ItemType = typing.TypeVar("ItemType")
+
+
 @dataclasses.dataclass(frozen=True)
-class SystemList:
-    items: list[System]
+class OacsFeatureList(typing.Generic[ItemType]):
+    item_type: typing.ClassVar[typing.Type] = typing.Type[ItemType]
+    items: list[ItemType]
 
     @classmethod
-    def from_api_response(cls, response_content: dict) -> "SystemList":
+    def from_api_response(cls, response_content: dict) -> "OacsFeatureList":
         items = []
-        for raw_system in response_content.get("features", []):
+        for raw_feature in response_content.get("features", []):
             try:
-                items.append(System.from_api_response(raw_system))
+                items.append(cls.item_type.from_api_response(raw_feature))
             except ValueError as err:
                 log_message(
-                    f"Could not parse {raw_system!r} - {str(err)}",
+                    f"Could not parse {raw_feature!r} - {str(err)}",
                     level=qgis.core.Qgis.MessageLevel.Warning
                 )
         return cls(items=items)
 
 
 @dataclasses.dataclass(frozen=True)
-class SamplingFeatureList:
-    items: list[SamplingFeature]
+class SystemList(OacsFeatureList):
+    item_type = System
 
-    @classmethod
-    def from_api_response(cls, response_content: dict) -> "SamplingFeatureList":
-        items = []
-        for raw in response_content.get("features", []):
-            try:
-                items.append(SamplingFeature.from_api_response(raw))
-            except ValueError as err:
-                log_message(f"Could not parse {raw!r} - {str(err)}")
-        return cls(items=items)
+
+@dataclasses.dataclass(frozen=True)
+class DeploymentList(OacsFeatureList):
+    item_type = Deployment
+
+
+@dataclasses.dataclass(frozen=True)
+class SamplingFeatureList(OacsFeatureList):
+    item_type = SamplingFeature
 
 
 @dataclasses.dataclass(frozen=True)

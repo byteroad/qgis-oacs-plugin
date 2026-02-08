@@ -75,7 +75,11 @@ class SearchSamplingFeatureItemsWidget(
             sampling_feature_list: models.SamplingFeatureList,
             request_metadata: OacsRequestMetadata
     ) -> None:
-        for sampling_feature_item in sampling_feature_list.items:
-            display_widget = SamplingFeatureListItemWidget(sampling_feature_item)
-            self.search_results_layout.addWidget(display_widget)
+        if len(sampling_feature_list.items) == 0:
+            self.search_results_layout.addWidget(
+                QtWidgets.QLabel("No sampling features found"))
+        else:
+            for sampling_feature_item in sampling_feature_list.items:
+                display_widget = SamplingFeatureListItemWidget(sampling_feature_item)
+                self.search_results_layout.addWidget(display_widget)
         self.search_results_layout.addStretch()

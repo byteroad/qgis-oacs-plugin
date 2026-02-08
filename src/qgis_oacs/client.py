@@ -18,12 +18,14 @@ from .utils import log_message
 
 
 class RequestType(enum.Enum):
-    SYSTEM_LIST = "system-list"
-    SYSTEM_ITEM = "system-item"
-    SAMPLING_FEATURE_LIST = "sampling-feature-list"
-    SAMPLING_FEATURE_ITEM = "sampling-feature-item"
     DATASTREAM_LIST = "datastream-list"
     DATASTREAM_ITEM = "datastream-item"
+    DEPLOYMENT_LIST = "deployment-list"
+    DEPLOYMENT_ITEM = "deployment-item"
+    SAMPLING_FEATURE_LIST = "sampling-feature-list"
+    SAMPLING_FEATURE_ITEM = "sampling-feature-item"
+    SYSTEM_LIST = "system-list"
+    SYSTEM_ITEM = "system-item"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -36,6 +38,8 @@ class OacsClient(QtCore.QObject):
     request_started = QtCore.pyqtSignal(OacsRequestMetadata)
     request_ended = QtCore.pyqtSignal(OacsRequestMetadata)
     request_failed = QtCore.pyqtSignal(OacsRequestMetadata, str)
+    deployment_list_fetched = QtCore.pyqtSignal(models.DeploymentList, OacsRequestMetadata)
+    deployment_item_fetched = QtCore.pyqtSignal(models.Deployment, OacsRequestMetadata)
     system_list_fetched = QtCore.pyqtSignal(models.SystemList, OacsRequestMetadata)
     system_item_fetched = QtCore.pyqtSignal(models.System, OacsRequestMetadata)
     sampling_feature_list_fetched = QtCore.pyqtSignal(models.SamplingFeatureList, OacsRequestMetadata)
@@ -63,6 +67,7 @@ class OacsClient(QtCore.QObject):
             task_metadata=meta,
             response_handler=functools.partial(
                 self.handle_network_response,
+                #parser=models.SystemList.from_api_response,
                 parser=models.SystemList.from_api_response,
                 to_emit=self.system_list_fetched,
             )
@@ -70,12 +75,41 @@ class OacsClient(QtCore.QObject):
         self.request_started.emit(meta)
         return meta
 
-    def initiate_sampling_feature_list_search(
+    def initiate_deployment_list_search(
             self,
-            connection: settings.DataSourceConnectionSettings
+            connection: settings.DataSourceConnectionSettings,
+            q_filter: str | None = None,
     ) -> OacsRequestMetadata:
         query = {
-            "f": "geojson" if connection.use_f_query_param else None
+            "f": "geojson" if connection.use_f_query_param else None,
+            "q": q_filter,
+        }
+        meta = OacsRequestMetadata(request_type=RequestType.DEPLOYMENT_LIST)
+        self.dispatch_network_request(
+            search_params=models.ClientSearchParams(
+                "/deployments",
+                query={k: v for k, v in query.items()} if query else None,
+                headers={"Accept": "application/geo+json"},
+            ),
+            connection=connection,
+            task_metadata=meta,
+            response_handler=functools.partial(
+                self.handle_network_response,
+                parser=models.DeploymentList.from_api_response,
+                to_emit=self.deployment_list_fetched,
+            )
+        )
+        self.request_started.emit(meta)
+        return meta
+
+    def initiate_sampling_feature_list_search(
+            self,
+            connection: settings.DataSourceConnectionSettings,
+            q_filter: str | None = None,
+    ) -> OacsRequestMetadata:
+        query = {
+            "f": "geojson" if connection.use_f_query_param else None,
+            "q": q_filter,
         }
         meta = OacsRequestMetadata(request_type=RequestType.SAMPLING_FEATURE_LIST)
         self.dispatch_network_request(
@@ -97,10 +131,12 @@ class OacsClient(QtCore.QObject):
 
     def initiate_datastream_list_search(
             self,
-            connection: settings.DataSourceConnectionSettings
+            connection: settings.DataSourceConnectionSettings,
+            q_filter: str | None = None,
     ) -> OacsRequestMetadata:
         query = {
-            "f": "json" if connection.use_f_query_param else None
+            "f": "json" if connection.use_f_query_param else None,
+            "q": q_filter,
         }
         meta = OacsRequestMetadata(request_type=RequestType.DATASTREAM_LIST)
         self.dispatch_network_request(
@@ -141,6 +177,32 @@ class OacsClient(QtCore.QObject):
                 self.handle_network_response,
                 parser=models.System.from_api_response,
                 to_emit=self.system_item_fetched
+            )
+        )
+        self.request_started.emit(meta)
+        return meta
+
+    def initiate_deployment_item_fetch(
+            self,
+            deployment_id: str,
+            connection: settings.DataSourceConnectionSettings
+    ) -> OacsRequestMetadata:
+        query = {
+            "f": "geojson" if connection.use_f_query_param else None
+        }
+        meta = OacsRequestMetadata(request_type=RequestType.DEPLOYMENT_ITEM)
+        self.dispatch_network_request(
+            search_params=models.ClientSearchParams(
+                f"/deployments/{deployment_id}",
+                query={k: v for k, v in query.items()} if query else None,
+                headers={"Accept": "application/geo+json"},
+            ),
+            connection=connection,
+            task_metadata=meta,
+            response_handler=functools.partial(
+                self.handle_network_response,
+                parser=models.Deployment.from_api_response,
+                to_emit=self.deployment_item_fetched
             )
         )
         self.request_started.emit(meta)
@@ -205,6 +267,18 @@ class OacsClient(QtCore.QObject):
     ) -> OacsRequestMetadata | None:
         """Initiate a request using a Link object from an API response."""
         rel_config = {
+            LinkRelation.deployments: (
+                RequestType.DEPLOYMENT_LIST,
+                models.DeploymentList.from_api_response,
+                self.deployment_list_fetched,
+                {"Accept": "application/geo+json"},
+            ),
+            OgcLinkRelation.deployments: (
+                RequestType.DEPLOYMENT_LIST,
+                models.DeploymentList.from_api_response,
+                self.deployment_list_fetched,
+                {"Accept": "application/geo+json"},
+            ),
             LinkRelation.sampling_features: (
                 RequestType.SAMPLING_FEATURE_LIST,
                 models.SamplingFeatureList.from_api_response,
