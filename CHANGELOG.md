@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-02-09
+
+### Fixed
+-  Fixed wrong version in pyproject.toml
+
 
 ## [0.0.1] - 2026-02-09
 
@@ -16,4 +21,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [unreleased]: https://github.com/byteroad/qgis-oacs-plugin
+[0.0.2]: https://github.com/byteroad/qgis-oacs-plugin/compare/v0.0.2...main
 [0.0.1]: https://github.com/byteroad/qgis-oacs-plugin/compare/v0.0.1...main
