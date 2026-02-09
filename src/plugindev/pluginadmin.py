@@ -294,7 +294,6 @@ def generate_plugin_repo_xml(
                 tags=metadata.get("tags"),
             )
             contents = "\n".join((contents, fragment))
-        contents = "\n".join((contents, "</plugins>"))
         repo_index = target_dir / "plugins.xml"
         repo_index.write_text(contents, encoding="utf-8")
         print(f"Plugin repo XML file saved at {repo_index}")
