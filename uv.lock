@@ -402,7 +402,7 @@ wheels = [
 
 [[package]]
 name = "qgis-oacs-plugin"
-version = "0.0.4"
+version = "0.1.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
