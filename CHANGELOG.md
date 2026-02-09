@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-02-09
+
+### Added
+-  CI workflow to publish to private QGIS repo
+
+
 ## [0.0.2] - 2026-02-09
 
 ### Fixed
@@ -21,5 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [unreleased]: https://github.com/byteroad/qgis-oacs-plugin
+[0.0.2]: https://github.com/byteroad/qgis-oacs-plugin/compare/v0.0.3...main
 [0.0.2]: https://github.com/byteroad/qgis-oacs-plugin/compare/v0.0.2...main
 [0.0.1]: https://github.com/byteroad/qgis-oacs-plugin/compare/v0.0.1...main

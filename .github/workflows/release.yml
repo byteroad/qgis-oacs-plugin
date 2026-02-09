@@ -1,0 +1,57 @@
+name: Create a release
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  create-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Grab code"
+        uses: actions/checkout@v4.2.2
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.18"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: "Install code"
+        run: uv sync --frozen
+
+      - name: generate zip
+        run: uv run plugin-admin generate-zip
+
+      - name: get zip details
+        id: get-zip-details
+        run: |
+          echo "::set-output name=ZIP_PATH::dist/$(ls dist)\n"
+          echo "::set-output name=ZIP_NAME::$(ls dist)"
+
+      - name: Get experimental info
+        id: get-experimental
+        run: |
+          echo "::set-output name=IS_EXPERIMENTAL::$(uv run python -c "from pathlib import Path; import tomllib; data=tomllib.loads(Path('pyproject.toml').read_text()); print(data['tool']['qgis-plugin']['metadata']['experimental'].lower())")"
+
+      - name: create release from tag
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            ${{ steps.get-zip-details.outputs.ZIP_PATH }}
+          tag_name: ${{ github.ref_name }}
+          prerelease: ${{ steps.get-experimental.outputs.IS_EXPERIMENTAL }}
+          draft: false
+
+  update-docs:
+    needs: create-release
+    uses: ./.github/workflows/docs.yml

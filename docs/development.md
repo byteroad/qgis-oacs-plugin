@@ -117,7 +117,8 @@ In order to have a new version of the plugin released:
 
 -  Be sure to have updated the `CHANGELOG.md`
 
--  Be sure to have updated the version on the `pyproject.toml` file. 
+-  Be sure to have updated the version on the `pyproject.toml` file AND to have synced the uv lockfile after 
+   having made this change
 
 -  Create a new git annotated tag and push it to the repository. **The tag name must
    follow the `v{major}.{minor}.{patch}` convention**, for example:
@@ -129,3 +130,5 @@ In order to have a new version of the plugin released:
 
 -  Github actions will take it from there. The new release shall appear in the custom
    QGIS plugin repo shortly
+
+- Do a post-release commit setting the version back to dev
