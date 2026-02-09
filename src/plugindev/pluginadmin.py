@@ -287,7 +287,7 @@ def generate_plugin_repo_xml(
                 author=metadata.get("author"),
                 download_url=release.url,
                 update_date=release.published_at,
-                experimental=release.pre_release,
+                experimental=metadata.get("experimental", True),
                 deprecated=metadata.get("deprecated"),
                 tracker=metadata.get("tracker"),
                 repository=metadata.get("repository"),
@@ -363,7 +363,7 @@ def _get_virtualenv_site_packages_dir() -> Path:
 
 
 @lru_cache()
-def _get_metadata() -> typing.Dict:
+def _get_metadata() -> dict:
     pyproject_path = LOCAL_ROOT_DIR / "pyproject.toml"
     with pyproject_path.open("rb") as fh:
         conf = tomllib.load(fh)
