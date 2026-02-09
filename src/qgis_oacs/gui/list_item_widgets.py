@@ -5,6 +5,7 @@ from pathlib import Path
 from qgis.PyQt.uic import loadUiType
 from qgis.PyQt import (
     QtCore,
+    QtGui,
     QtWidgets,
 )
 
@@ -16,6 +17,7 @@ from ..client import (
     oacs_client,
     OacsRequestMetadata,
 )
+from ..constants import IconPath
 from ..utils import log_message
 from ..settings import settings_manager
 
@@ -34,6 +36,7 @@ class SystemListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
     item: models.System
 
     _already_fetched_details: bool
+    _layer_load_has_been_requested: bool
 
     def __init__(
             self,
@@ -42,10 +45,18 @@ class SystemListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
     ):
         super().__init__(parent)
         self.setupUi(self)
-        self.details_pb.setText("Details...")
-        self.details_frame.setVisible(False)
         self.item = item
+        self.details_pb.setText("Details...")
+        self.load_pb.setIcon(
+            QtGui.QIcon(
+                IconPath.feature_has_geospatial_location
+                if self.item.geometry
+                else IconPath.feature_does_not_have_geospatial_location
+            )
+        )
+        self.details_frame.setVisible(False)
         self._already_fetched_details = False
+        self._layer_load_has_been_requested = False
         utils.set_up_icon(
             self.icon_la,
             icon_path=(
@@ -85,9 +96,14 @@ class SystemListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
 
     def load_as_layer(self):
         if self._already_fetched_details:
-            raise NotImplementedError
+            self.initiate_layer_loading()
         else:
-            raise NotImplementedError
+            self._layer_load_has_been_requested = True
+            self.initiate_fetch_details()
+
+
+    def initiate_layer_loading(self) -> None:
+        utils.load_oacs_feature_as_layer(self.item)
 
     def initiate_fetch_details(self) -> None:
         oacs_client.initiate_system_item_fetch(
@@ -104,6 +120,11 @@ class SystemListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
             return None
         self.item = item
         self._already_fetched_details = True
+
+        if self._layer_load_has_been_requested:
+            self._layer_load_has_been_requested = False
+            return self.initiate_layer_loading()
+
         table_items = [
             (QtWidgets.QTableWidgetItem(k), QtWidgets.QTableWidgetItem(v))
             for k, v in self.item.get_renderable_properties().items()
@@ -144,6 +165,7 @@ class DeploymentListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
     item: models.Deployment
 
     _already_fetched_details: bool
+    _layer_load_has_been_requested: bool
 
     def __init__(
             self,
@@ -152,10 +174,18 @@ class DeploymentListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
     ):
         super().__init__(parent)
         self.setupUi(self)
-        self.details_pb.setText("Details...")
-        self.details_frame.setVisible(False)
         self.item = item
+        self.details_pb.setText("Details...")
+        self.load_pb.setIcon(
+            QtGui.QIcon(
+                IconPath.feature_has_geospatial_location
+                if self.item.geometry
+                else IconPath.feature_does_not_have_geospatial_location
+            )
+        )
+        self.details_frame.setVisible(False)
         self._already_fetched_details = False
+        self._layer_load_has_been_requested = False
         utils.set_up_icon(
             self.icon_la,
             icon_path=models.IconPath.deployment,
@@ -191,9 +221,13 @@ class DeploymentListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
 
     def load_as_layer(self):
         if self._already_fetched_details:
-            raise NotImplementedError
+            self.initiate_layer_loading()
         else:
-            raise NotImplementedError
+            self._layer_load_has_been_requested = True
+            self.initiate_fetch_details()
+
+    def initiate_layer_loading(self) -> None:
+        utils.load_oacs_feature_as_layer(self.item)
 
     def initiate_fetch_details(self) -> None:
         oacs_client.initiate_deployment_item_fetch(
@@ -210,6 +244,11 @@ class DeploymentListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
             return None
         self.item = item
         self._already_fetched_details = True
+
+        if self._layer_load_has_been_requested:
+            self._layer_load_has_been_requested = False
+            return self.initiate_layer_loading()
+
         table_items = [
             (QtWidgets.QTableWidgetItem(k), QtWidgets.QTableWidgetItem(v))
             for k, v in self.item.get_renderable_properties().items()
@@ -250,6 +289,7 @@ class SamplingFeatureListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi)
     item: models.SamplingFeature
 
     _already_fetched_details: bool
+    _layer_load_has_been_requested: bool
 
     def __init__(
             self,
@@ -258,10 +298,18 @@ class SamplingFeatureListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi)
     ):
         super().__init__(parent)
         self.setupUi(self)
-        self.details_pb.setText("Details...")
-        self.details_frame.setVisible(False)
         self.item = item
+        self.details_pb.setText("Details...")
+        self.load_pb.setIcon(
+            QtGui.QIcon(
+                IconPath.feature_has_geospatial_location
+                if self.item.geometry
+                else IconPath.feature_does_not_have_geospatial_location
+            )
+        )
+        self.details_frame.setVisible(False)
         self._already_fetched_details = False
+        self._layer_load_has_been_requested = False
         utils.set_up_icon(
             self.icon_la,
             icon_path=models.IconPath.sampling_feature,
@@ -294,9 +342,13 @@ class SamplingFeatureListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi)
 
     def load_as_layer(self):
         if self._already_fetched_details:
-            raise NotImplementedError
+            self.initiate_layer_loading()
         else:
-            raise NotImplementedError
+            self._layer_load_has_been_requested = True
+            self.initiate_fetch_details()
+
+    def initiate_layer_loading(self) -> None:
+        utils.load_oacs_feature_as_layer(self.item)
 
     def initiate_fetch_details(self) -> None:
         oacs_client.initiate_sampling_feature_item_fetch(
@@ -313,6 +365,11 @@ class SamplingFeatureListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi)
             return None
         self.item = item
         self._already_fetched_details = True
+
+        if self._layer_load_has_been_requested:
+            self._layer_load_has_been_requested = False
+            return self.initiate_layer_loading()
+
         table_items = [
             (QtWidgets.QTableWidgetItem(k), QtWidgets.QTableWidgetItem(v))
             for k, v in self.item.get_renderable_properties().items()

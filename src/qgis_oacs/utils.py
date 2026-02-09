@@ -11,6 +11,9 @@ from qgis.PyQt import (
     QtWidgets,
 )
 
+if typing.TYPE_CHECKING:
+    from . import models
+
 
 def log_message(
         message: str,
@@ -118,3 +121,31 @@ def clear_search_results(layout_displayer: QtWidgets.QLayout) -> None:
         item = layout_displayer.takeAt(0)
         if widget := item.widget():
             widget.deleteLater()
+
+
+def load_oacs_feature_as_layer(oacs_feat: "models.OacsFeature") -> None:
+    if oacs_feat.geometry:
+        geom_type = qgis.core.QgsWkbTypes.displayString(
+            oacs_feat.geometry.wkbType())
+        crs = oacs_feat.geometry.crs()
+    else:
+        geom_type = "None"
+        crs = qgis.core.QgsCoordinateReferenceSystem("EPSG:4326")
+    vector_layer = qgis.core.QgsVectorLayer(
+        f"{geom_type}?crs={crs.authid()}", oacs_feat.name, "memory")
+    provider = vector_layer.dataProvider()
+    properties = oacs_feat.get_renderable_properties()
+    provider.addAttributes(
+        [
+            qgis.core.QgsField(k, QtCore.QVariant.Type.String)
+            for k in properties
+        ]
+    )
+    vector_layer.updateFields()
+    qgis_feature = qgis.core.QgsFeature(vector_layer.fields())
+    if oacs_feat.geometry:
+        qgis_feature.setGeometry(oacs_feat.geometry)
+    qgis_feature.setAttributes(list(properties.values()))
+    provider.addFeatures([qgis_feature])
+    vector_layer.updateExtents()
+    qgis.core.QgsProject.instance().addMapLayer(vector_layer)

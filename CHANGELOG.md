@@ -8,5 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.0.1] - 2026-02-09
+
+### Added
+-  Initial release for early feedback
+
+
 
 [unreleased]: https://github.com/byteroad/qgis-oacs-plugin
+[0.0.1]: https://github.com/byteroad/qgis-oacs-plugin/compare/v0.0.1...main
