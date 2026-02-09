@@ -266,8 +266,8 @@ def generate_plugin_repo_xml(
     repo_owner, repo_name = repo_owner_name.split("/")
     logger.info(f"{repo_owner=}, {repo_name=}")
     all_releases = _get_existing_releases(
-        repository_name=repo_owner,
-        repository_owner=repo_name,
+        repository_name=repo_name,
+        repository_owner=repo_owner,
         context=context
     )
     logger.info(f"{all_releases=}")
