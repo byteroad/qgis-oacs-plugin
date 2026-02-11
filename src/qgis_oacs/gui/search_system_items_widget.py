@@ -1,3 +1,4 @@
+import functools
 from pathlib import Path
 
 from qgis.PyQt import QtWidgets
@@ -85,7 +86,19 @@ class SearchSystemItemsWidget(QtWidgets.QWidget, SearchSystemItemsWidgetUi):
             self.search_results_layout.addWidget(
                 QtWidgets.QLabel("No systems found"))
         else:
+            load_all_pb = QtWidgets.QPushButton("Load all resources")
+            button_layout = QtWidgets.QHBoxLayout()
+            button_layout.setContentsMargins(0, 0, 0, 0)
+            button_layout.addStretch()
+            button_layout.addWidget(load_all_pb)
+            load_all_pb.clicked.connect(
+                functools.partial(self.load_all_as_layers, system_list)
+            )
+            self.search_results_layout.addLayout(button_layout)
             for item in system_list.items:
                 display_widget = SystemListItemWidget(item)
                 self.search_results_layout.addWidget(display_widget)
         self.search_results_layout.addStretch()
+
+    def load_all_as_layers(self, system_list: models.SystemList) -> None:
+        utils.load_oacs_feature_list_as_layers(system_list)
