@@ -14,10 +14,10 @@ from .. import utils
 from ..client import oacs_client
 from ..settings import settings_manager
 from .search_datastream_items_widget import SearchDataStreamItemsWidget
-from .search_deployment_items_widget import SearchDeploymentItemsWidget
-from .search_sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
-from .search_system_items_widget import SearchSystemItemsWidget
 from .data_source_connection_dialog import DataSourceConnectionDialog
+from .search_widgets.system_items_widget import SearchSystemItemsWidget
+from .search_widgets.deployment_items_widget import SearchDeploymentItemsWidget
+from .search_widgets.sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
 
 DataSourceWidgetUi, _ = loadUiType(Path(__file__).parents[1] / "ui/data_source_widget.ui")
 
