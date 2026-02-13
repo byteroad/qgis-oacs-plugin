@@ -353,10 +353,11 @@ class OacsClient(QtCore.QObject):
         elif task_metadata.request_id != target_task_metadata.request_id:
             return None
         try:
-            if (request_error := reply.error()) != QtNetwork.QNetworkReply.NetworkError.NoError:
-                error_message = reply.errorString()
+            if reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
+                http_status = reply.attribute(QtNetwork.QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+                error_message = f"HTTP code {http_status}: {reply.errorString()}"
                 self.request_failed.emit(task_metadata, error_message)
-                log_message(f"Connection error {error_message} - (code: {request_error})")
+                log_message(f"Connection error {error_message!r}")
             else:
                 response_payload = response.contentAsString()
                 parsed_payload = parser(json.loads(response_payload))

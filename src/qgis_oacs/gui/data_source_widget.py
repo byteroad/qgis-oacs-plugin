@@ -11,7 +11,10 @@ from qgis.PyQt import (
 from qgis.PyQt.uic import loadUiType
 
 from .. import utils
-from ..client import oacs_client
+from ..client import (
+    oacs_client,
+    OacsRequestMetadata,
+)
 from ..settings import settings_manager
 from .data_source_connection_dialog import DataSourceConnectionDialog
 from .search_widgets.datastream_items_widget import SearchDataStreamItemsWidget
@@ -66,6 +69,7 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
 
         oacs_client.request_started.connect(self.handle_search_started)
         oacs_client.request_ended.connect(self.handle_search_ended)
+        oacs_client.request_failed.connect(self.handle_request_failed)
 
         self._connection_controls = (
             self.connection_list_cmb,
@@ -147,6 +151,18 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
 
     def handle_search_ended(self):
         utils.toggle_widgets_enabled(self._interactive_widgets, force_state=True)
+
+    def handle_request_failed(
+            self,
+            task_metadata: OacsRequestMetadata,
+            error_message: str
+    ) -> None:
+        message = f"{task_metadata.request_type.value} - {error_message}"
+        utils.show_message(
+            self.message_bar,
+            message,
+            level=qgis.core.Qgis.MessageLevel.Warning
+        )
 
     def _spawn_data_source_connection_deletion_dialog(self, connection_name: str):
         message = f"Remove connection {connection_name!r}?"
