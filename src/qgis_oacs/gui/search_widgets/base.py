@@ -55,6 +55,27 @@ class OacsResourceSearchWidgetBase(QtWidgets.QWidget, metaclass=_AbstractQWidget
         utils.clear_search_results(self.search_results_layout)
         self._initiate_search()
 
+    def handle_search_response(
+            self,
+            search_result: models.OacsFeatureList,
+            request_metadata: OacsRequestMetadata
+    ) -> None:
+        if len(search_result.items) == 0:
+            self.search_results_layout.addWidget(
+                QtWidgets.QLabel("No items found"))
+        else:
+            for item in search_result.items:
+                self.search_results_layout.addWidget(
+                    self._get_display_widget(item)
+                )
+        self.search_results_layout.addStretch()
+
+
+class OacsFeatureSearchWidgetBase(
+    OacsResourceSearchWidgetBase,
+    metaclass=_AbstractQWidgetMeta
+):
+
     def _add_load_all_search_results_button(
             self,
             oacs_feature_list: models.OacsFeatureList,

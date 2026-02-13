@@ -551,7 +551,7 @@ class DataStreamObservedProperty:
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class DataStream(OacsFeature):
+class DataStream(OacsItem):
     formats: list[str]
     system_link: Link
     observed_properties: list[DataStreamObservedProperty] | None = None
@@ -629,25 +629,6 @@ ItemType = typing.TypeVar("ItemType", bound=OacsItem)
 
 
 @dataclasses.dataclass(frozen=True)
-class OacsItemList(typing.Generic[ItemType]):
-    item_type: typing.ClassVar[typing.Type[OacsItem]] = typing.Type[ItemType]
-    items: list[ItemType]
-
-    @classmethod
-    def from_api_response(cls, response_content: dict) -> "OacsItemList[ItemType]":
-        items = []
-        for raw_item in response_content.get("items", []):
-            try:
-                items.append(cls.item_type.from_api_response(raw_item))
-            except ValueError as err:
-                log_message(
-                    f"Could not parse {raw_item!r} - {str(err)}",
-                    level=qgis.core.Qgis.MessageLevel.Warning
-                )
-        return cls(items=items)
-
-
-@dataclasses.dataclass(frozen=True)
 class OacsFeatureList(typing.Generic[ItemType]):
     item_type: typing.ClassVar[typing.Type[OacsFeature]] = typing.Type[ItemType]
     items: list[ItemType]
@@ -679,6 +660,25 @@ class DeploymentList(OacsFeatureList):
 @dataclasses.dataclass(frozen=True)
 class SamplingFeatureList(OacsFeatureList):
     item_type = SamplingFeature
+
+
+@dataclasses.dataclass(frozen=True)
+class OacsItemList(typing.Generic[ItemType]):
+    item_type: typing.ClassVar[typing.Type[OacsItem]] = typing.Type[ItemType]
+    items: list[ItemType]
+
+    @classmethod
+    def from_api_response(cls, response_content: dict) -> "OacsItemList[ItemType]":
+        items = []
+        for raw_item in response_content.get("items", []):
+            try:
+                items.append(cls.item_type.from_api_response(raw_item))
+            except ValueError as err:
+                log_message(
+                    f"Could not parse {raw_item!r} - {str(err)}",
+                    level=qgis.core.Qgis.MessageLevel.Warning
+                )
+        return cls(items=items)
 
 
 @dataclasses.dataclass(frozen=True)

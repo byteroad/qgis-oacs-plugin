@@ -8,15 +8,17 @@ from ... import models
 from ...client import oacs_client
 from ...settings import settings_manager
 from .. import list_item_widgets
-from .base import OacsResourceSearchWidgetBase
+from .base import OacsFeatureSearchWidgetBase
 
 SearchSystemItemsWidgetUi, _ = loadUiType(
     Path(__file__).parents[2] / "ui/search_system_items_widget.ui")
 
 
-class SearchSystemItemsWidget(OacsResourceSearchWidgetBase, SearchSystemItemsWidgetUi):
+class SearchSystemItemsWidget(
+    OacsFeatureSearchWidgetBase,
+    SearchSystemItemsWidgetUi
+):
     id_le: QtWidgets.QLineEdit
-    free_text_le: QtWidgets.QLineEdit
     advanced_filters_gb: QtWidgets.QGroupBox
     property_name_le: QtWidgets.QLineEdit
     property_value_le: QtWidgets.QLineEdit

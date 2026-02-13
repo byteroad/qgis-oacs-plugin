@@ -60,7 +60,10 @@ class OacsClient(QtCore.QObject):
         self.dispatch_network_request(
             search_params=models.ClientSearchParams(
                 "/systems",
-                query={k: v for k, v in query.items() if v} or None,
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
                 headers={"Accept": "application/geo+json"},
             ),
             connection=connection,
@@ -88,7 +91,10 @@ class OacsClient(QtCore.QObject):
         self.dispatch_network_request(
             search_params=models.ClientSearchParams(
                 "/deployments",
-                query={k: v for k, v in query.items()} if query else None,
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
                 headers={"Accept": "application/geo+json"},
             ),
             connection=connection,
@@ -115,7 +121,10 @@ class OacsClient(QtCore.QObject):
         self.dispatch_network_request(
             search_params=models.ClientSearchParams(
                 "/samplingFeatures",
-                query={k: v for k, v in query.items()} if query else None,
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
                 headers={"Accept": "application/geo+json"},
             ),
             connection=connection,
@@ -142,7 +151,10 @@ class OacsClient(QtCore.QObject):
         self.dispatch_network_request(
             search_params=models.ClientSearchParams(
                 "/datastreams",
-                query={k: v for k, v in query.items()} if query else None,
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
                 headers={"Accept": "application/json"},
             ),
             connection=connection,

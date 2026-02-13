@@ -8,17 +8,16 @@ from ... import models
 from ...client import oacs_client
 from ...settings import settings_manager
 from .. import list_item_widgets
-from .base import OacsResourceSearchWidgetBase
+from .base import OacsFeatureSearchWidgetBase
 
 SearchDeploymentItemsWidgetUi, _ = loadUiType(
     Path(__file__).parents[2] / "ui/search_deployment_items_widget.ui")
 
 
 class SearchDeploymentItemsWidget(
-    OacsResourceSearchWidgetBase,
+    OacsFeatureSearchWidgetBase,
     SearchDeploymentItemsWidgetUi
 ):
-    free_text_le: QtWidgets.QLineEdit
 
     def __init__(
             self,
