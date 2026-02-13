@@ -60,7 +60,10 @@ class OacsClient(QtCore.QObject):
         self.dispatch_network_request(
             search_params=models.ClientSearchParams(
                 "/systems",
-                query={k: v for k, v in query.items() if v} or None,
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
                 headers={"Accept": "application/geo+json"},
             ),
             connection=connection,
@@ -88,7 +91,10 @@ class OacsClient(QtCore.QObject):
         self.dispatch_network_request(
             search_params=models.ClientSearchParams(
                 "/deployments",
-                query={k: v for k, v in query.items()} if query else None,
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
                 headers={"Accept": "application/geo+json"},
             ),
             connection=connection,
@@ -115,7 +121,10 @@ class OacsClient(QtCore.QObject):
         self.dispatch_network_request(
             search_params=models.ClientSearchParams(
                 "/samplingFeatures",
-                query={k: v for k, v in query.items()} if query else None,
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
                 headers={"Accept": "application/geo+json"},
             ),
             connection=connection,
@@ -142,7 +151,10 @@ class OacsClient(QtCore.QObject):
         self.dispatch_network_request(
             search_params=models.ClientSearchParams(
                 "/datastreams",
-                query={k: v for k, v in query.items()} if query else None,
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
                 headers={"Accept": "application/json"},
             ),
             connection=connection,
@@ -341,10 +353,11 @@ class OacsClient(QtCore.QObject):
         elif task_metadata.request_id != target_task_metadata.request_id:
             return None
         try:
-            if (request_error := reply.error()) != QtNetwork.QNetworkReply.NetworkError.NoError:
-                error_message = reply.errorString()
+            if reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
+                http_status = reply.attribute(QtNetwork.QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+                error_message = f"HTTP code {http_status}: {reply.errorString()}"
                 self.request_failed.emit(task_metadata, error_message)
-                log_message(f"Connection error {error_message} - (code: {request_error})")
+                log_message(f"Connection error {error_message!r}")
             else:
                 response_payload = response.contentAsString()
                 parsed_payload = parser(json.loads(response_payload))

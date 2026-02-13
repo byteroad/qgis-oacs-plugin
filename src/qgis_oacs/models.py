@@ -246,23 +246,32 @@ class OacsFeatureProtocol(typing.Protocol):
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class OacsFeature(abc.ABC):
+class OacsItem(abc.ABC):
     id_: str
-    uid: str
     name: str
-    feature_type: str | None = None
     description: str | None = None
+
+    @classmethod
+    @abc.abstractmethod
+    def from_api_response(cls, response_content: dict) -> "OacsItem": ...
+
+    def get_renderable_properties(self) -> dict[str, str]:
+        return {
+            "Name": self.name,
+        }
+
+    def get_relevant_links(self) -> list[Link]:
+        return []
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class OacsFeature(OacsItem, abc.ABC):
+    uid: str
+    feature_type: str | None = None
     geometry: qgis.core.QgsReferencedGeometry | None = None
     bbox: qgis.core.QgsReferencedRectangle | None = None
     links: list[Link] = dataclasses.field(default_factory=list)
     additional_properties: dict[str, str] | None = None
-
-    @classmethod
-    @abc.abstractmethod
-    def from_api_response(cls, response_content: dict) -> "OacsFeature": ...
-
-    @abc.abstractmethod
-    def get_relevant_links(self) -> list[Link]: ...
 
     def get_renderable_properties(self) -> dict[str, str]:
         return {
@@ -541,10 +550,8 @@ class DataStreamObservedProperty:
         return cls(**response_content)
 
 
-@dataclasses.dataclass(frozen=True)
-class DataStream:
-    id_: str
-    name: str
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class DataStream(OacsItem):
     formats: list[str]
     system_link: Link
     observed_properties: list[DataStreamObservedProperty] | None = None
@@ -552,7 +559,6 @@ class DataStream:
     result_time: TimePeriod | None = None
     result_type: DataStreamResultType | None = None
     live: bool = False
-    description: str | None = None
     validTime: TimePeriod | None = None
     datastream_type: DataStreamType | None = None
     phenomenon_interval: str | None = None
@@ -619,16 +625,16 @@ class DataStream:
         return []
 
 
-ItemType = typing.TypeVar("ItemType")
+ItemType = typing.TypeVar("ItemType", bound=OacsItem)
 
 
 @dataclasses.dataclass(frozen=True)
 class OacsFeatureList(typing.Generic[ItemType]):
-    item_type: typing.ClassVar[typing.Type] = typing.Type[ItemType]
+    item_type: typing.ClassVar[typing.Type[OacsFeature]] = typing.Type[ItemType]
     items: list[ItemType]
 
     @classmethod
-    def from_api_response(cls, response_content: dict) -> "OacsFeatureList":
+    def from_api_response(cls, response_content: dict) -> "OacsFeatureList[ItemType]":
         items = []
         for raw_feature in response_content.get("features", []):
             try:
@@ -657,16 +663,24 @@ class SamplingFeatureList(OacsFeatureList):
 
 
 @dataclasses.dataclass(frozen=True)
-class DataStreamList:
-    items: list[DataStream]
-    links: list[Link] | None = None
+class OacsItemList(typing.Generic[ItemType]):
+    item_type: typing.ClassVar[typing.Type[OacsItem]] = typing.Type[ItemType]
+    items: list[ItemType]
 
     @classmethod
-    def from_api_response(cls, response_content: dict) -> "DataStreamList":
+    def from_api_response(cls, response_content: dict) -> "OacsItemList[ItemType]":
         items = []
-        for raw_item in response_content["items"]:
+        for raw_item in response_content.get("items", []):
             try:
-                items.append(DataStream.from_api_response(raw_item))
+                items.append(cls.item_type.from_api_response(raw_item))
             except ValueError as err:
-                log_message(f"Could not parse {raw_item!r} - {str(err)}")
+                log_message(
+                    f"Could not parse {raw_item!r} - {str(err)}",
+                    level=qgis.core.Qgis.MessageLevel.Warning
+                )
         return cls(items=items)
+
+
+@dataclasses.dataclass(frozen=True)
+class DataStreamList(OacsItemList):
+    item_type = DataStream
