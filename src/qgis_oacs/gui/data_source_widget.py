@@ -19,6 +19,7 @@ from ..settings import settings_manager
 from .data_source_connection_dialog import DataSourceConnectionDialog
 from .search_widgets.datastream_items_widget import SearchDataStreamItemsWidget
 from .search_widgets.deployment_items_widget import SearchDeploymentItemsWidget
+from .search_widgets.procedure_items_widget import SearchProcedureItemsWidget
 from .search_widgets.sampling_feature_items_widget import SearchSamplingFeatureItemsWidget
 from .search_widgets.system_items_widget import SearchSystemItemsWidget
 
@@ -61,11 +62,15 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
             "systems": SearchSystemItemsWidget(),
             "deployments": SearchDeploymentItemsWidget(),
             "sampling features": SearchSamplingFeatureItemsWidget(),
+            "procedures": SearchProcedureItemsWidget(),
             "datastreams": SearchDataStreamItemsWidget(),
         }
         self.resource_types_tw.clear()
         for name, page in self.resource_type_pages.items():
             self.resource_types_tw.addTab(page, name.capitalize())
+        self.resource_types_tw.currentChanged.connect(
+            self.resource_types_tw.updateGeometry
+        )
 
         oacs_client.request_started.connect(self.handle_search_started)
         oacs_client.request_ended.connect(self.handle_search_ended)

@@ -1,7 +1,10 @@
 import abc
 import functools
 
-from qgis.PyQt import QtWidgets
+from qgis.PyQt import (
+    QtCore,
+    QtWidgets,
+)
 
 from ... import (
     models,
@@ -11,13 +14,13 @@ from ...client import OacsRequestMetadata
 from ...constants import IconPath
 from ...settings import settings_manager
 from ...client import oacs_client
+from ..abc import AbstractQWidgetMeta
 
 
-class _AbstractQWidgetMeta(type(QtWidgets.QWidget), abc.ABCMeta):
-    pass
-
-
-class OacsResourceSearchWidgetBase(QtWidgets.QWidget, metaclass=_AbstractQWidgetMeta):
+class OacsResourceSearchWidgetBase(
+    QtWidgets.QWidget,
+    metaclass=AbstractQWidgetMeta
+):
     free_text_le: QtWidgets.QLineEdit
     search_pb: QtWidgets.QPushButton
     search_results_layout: QtWidgets.QVBoxLayout
@@ -29,6 +32,16 @@ class OacsResourceSearchWidgetBase(QtWidgets.QWidget, metaclass=_AbstractQWidget
         self.search_pb.clicked.connect(self.initiate_search)
         oacs_client.request_started.connect(self.handle_request_started)
         oacs_client.request_ended.connect(self.handle_request_ended)
+
+    def sizeHint(self):
+        if self.isVisible():
+            return super().sizeHint()
+        return QtCore.QSize(0, 0)
+
+    def minimumSizeHint(self):
+        if self.isVisible():
+            return super().minimumSizeHint()
+        return QtCore.QSize(0, 0)
 
     @abc.abstractmethod
     def _initiate_search(self) -> None: ...
@@ -69,11 +82,12 @@ class OacsResourceSearchWidgetBase(QtWidgets.QWidget, metaclass=_AbstractQWidget
                     self._get_display_widget(item)
                 )
         self.search_results_layout.addStretch()
+        QtCore.QTimer.singleShot(0, self.updateGeometry)
 
 
 class OacsFeatureSearchWidgetBase(
     OacsResourceSearchWidgetBase,
-    metaclass=_AbstractQWidgetMeta
+    metaclass=AbstractQWidgetMeta
 ):
 
     def _add_load_all_search_results_button(
@@ -127,3 +141,4 @@ class OacsFeatureSearchWidgetBase(
                     self._get_display_widget(item)
                 )
         self.search_results_layout.addStretch()
+        QtCore.QTimer.singleShot(0, self.updateGeometry)

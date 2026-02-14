@@ -1,3 +1,4 @@
+import abc
 import typing
 import uuid
 from pathlib import Path
@@ -12,6 +13,7 @@ from qgis.PyQt import (
 from .. import (
     models,
     utils,
+    settings,
 )
 from ..client import (
     oacs_client,
@@ -20,68 +22,62 @@ from ..client import (
 from ..constants import IconPath
 from ..utils import log_message
 from ..settings import settings_manager
+from .abc import AbstractQWidgetMeta
 
 ResourceListItemWidgetUi, _ = loadUiType(
     Path(__file__).parents[1] / "ui/resource_list_item_widget.ui")
 
+DatastreamListItemWidgetUi, _ = loadUiType(
+    Path(__file__).parents[1] / "ui/datastream_list_item_widget.ui")
 
-class SystemListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
+
+class OacsItemListItemWidgetBase(
+    QtWidgets.QWidget,
+    metaclass=AbstractQWidgetMeta
+):
     name_la: QtWidgets.QLabel
     icon_la: QtWidgets.QLabel
     description_la: QtWidgets.QLabel
-    load_pb: QtWidgets.QPushButton
     details_pb: QtWidgets.QPushButton
     details_frame: QtWidgets.QFrame
     details_properties_tw: QtWidgets.QTableWidget
-    item: models.System
+    item: models.OacsItem
+    details_initiator: typing.Callable[[str, settings.DataSourceConnectionSettings ], None]
+    listen_to: QtCore.pyqtSignal
 
     _already_fetched_details: bool
-    _layer_load_has_been_requested: bool
 
     def __init__(
             self,
-            item: models.System,
+            item: models.OacsItem,
             parent: QtWidgets.QWidget | None = None
-    ):
+    ) -> None:
         super().__init__(parent)
         self.setupUi(self)
         self.item = item
         self.details_pb.setText("Details...")
-        self.load_pb.setIcon(
-            QtGui.QIcon(
-                IconPath.feature_has_geospatial_location
-                if self.item.geometry
-                else IconPath.feature_does_not_have_geospatial_location
-            )
-        )
         self.details_frame.setVisible(False)
         self._already_fetched_details = False
-        self._layer_load_has_been_requested = False
         utils.set_up_icon(
             self.icon_la,
-            icon_path=(
-                self.item.feature_type.get_icon_path()
-                if self.item.feature_type
-                else models.IconPath.system_type_system
-            ),
-            tooltip=(
-                self.item.feature_type.value.upper()
-                if self.item.feature_type
-                else models.SystemType.SYSTEM.value.upper()
-            )
+            icon_path=self.get_icon_path(),
+            tooltip=self.get_icon_tooltip()
         )
         self.name_la.setText(f"<h3>{self.item.name}</h3>")
         self.name_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        description_contents = """
-            <p>{uid}</p>
-        """.format(
-            uid=self.item.uid,
-        )
-        self.description_la.setText(description_contents)
+        self.description_la.setText(self.get_description())
         self.description_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
         self.details_pb.clicked.connect(self.toggle_details)
-        self.load_pb.clicked.connect(self.load_as_layer)
-        oacs_client.system_item_fetched.connect(self.handle_fetch_details_response)
+        self.listen_to.connect(self.handle_fetch_details_response)
+
+    @abc.abstractmethod
+    def get_icon_path(self) -> str: ...
+
+    @abc.abstractmethod
+    def get_icon_tooltip(self) -> str: ...
+
+    @abc.abstractmethod
+    def get_description(self) -> str: ...
 
     def toggle_details(self) -> None:
         if self.details_frame.isVisible():
@@ -94,21 +90,10 @@ class SystemListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
                 log_message(f"About to fetch details from the server...")
                 self.initiate_fetch_details()
 
-    def load_as_layer(self):
-        if self._already_fetched_details:
-            self.initiate_layer_loading()
-        else:
-            self._layer_load_has_been_requested = True
-            self.initiate_fetch_details()
-
-
-    def initiate_layer_loading(self) -> None:
-        utils.load_oacs_feature_as_layer(self.item)
-
     def initiate_fetch_details(self) -> None:
-        oacs_client.initiate_system_item_fetch(
+        self.details_initiator(
             self.item.id_,
-            settings_manager.get_current_data_source_connection()
+            settings.settings_manager.get_current_data_source_connection()
         )
 
     def handle_fetch_details_response(
@@ -118,13 +103,12 @@ class SystemListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
     ) -> None:
         if self.item.id_ != item.id_:
             return None
+
         self.item = item
         self._already_fetched_details = True
+        self._render_details()
 
-        if self._layer_load_has_been_requested:
-            self._layer_load_has_been_requested = False
-            return self.initiate_layer_loading()
-
+    def _render_details(self):
         table_items = [
             (QtWidgets.QTableWidgetItem(k), QtWidgets.QTableWidgetItem(v))
             for k, v in self.item.get_renderable_properties().items()
@@ -154,28 +138,22 @@ class SystemListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
         self.details_frame.layout().addWidget(self.related_resources_widget)
 
 
-class DeploymentListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
-    name_la: QtWidgets.QLabel
-    icon_la: QtWidgets.QLabel
-    description_la: QtWidgets.QLabel
+class OacsFeatureListItemWidgetBase(
+    OacsItemListItemWidgetBase,
+    metaclass=AbstractQWidgetMeta
+):
     load_pb: QtWidgets.QPushButton
-    details_pb: QtWidgets.QPushButton
-    details_frame: QtWidgets.QFrame
-    details_properties_tw: QtWidgets.QTableWidget
-    item: models.Deployment
-
-    _already_fetched_details: bool
+    item: models.OacsFeature
     _layer_load_has_been_requested: bool
 
     def __init__(
             self,
-            item: models.Deployment,
+            item: models.OacsFeature,
             parent: QtWidgets.QWidget | None = None
-    ):
-        super().__init__(parent)
-        self.setupUi(self)
-        self.item = item
-        self.details_pb.setText("Details...")
+    ) -> None:
+        self._layer_load_has_been_requested = False
+        super().__init__(item, parent)
+        self.load_pb.clicked.connect(self.load_as_layer)
         self.load_pb.setIcon(
             QtGui.QIcon(
                 IconPath.feature_has_geospatial_location
@@ -183,41 +161,9 @@ class DeploymentListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
                 else IconPath.feature_does_not_have_geospatial_location
             )
         )
-        self.details_frame.setVisible(False)
-        self._already_fetched_details = False
-        self._layer_load_has_been_requested = False
-        utils.set_up_icon(
-            self.icon_la,
-            icon_path=models.IconPath.deployment,
-            tooltip=(
-                self.item.feature_type.upper()
-                if self.item.feature_type
-                else "DEPLOYMENT"
-            )
-        )
-        self.name_la.setText(f"<h3>{self.item.name}</h3>")
-        self.name_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        description_contents = """
-            <p>{uid}</p>
-        """.format(
-            uid=self.item.uid,
-        )
-        self.description_la.setText(description_contents)
-        self.description_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        self.details_pb.clicked.connect(self.toggle_details)
-        self.load_pb.clicked.connect(self.load_as_layer)
-        oacs_client.deployment_item_fetched.connect(self.handle_fetch_details_response)
 
-    def toggle_details(self) -> None:
-        if self.details_frame.isVisible():
-            self.details_frame.setVisible(False)
-            self.details_pb.setText("Details...")
-        else:
-            self.details_pb.setText("Hide details...")
-            self.details_frame.setVisible(True)
-            if not self._already_fetched_details:
-                log_message(f"About to fetch details from the server...")
-                self.initiate_fetch_details()
+    @abc.abstractmethod
+    def initiate_layer_loading(self) -> None: ...
 
     def load_as_layer(self):
         if self._already_fetched_details:
@@ -226,287 +172,171 @@ class DeploymentListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
             self._layer_load_has_been_requested = True
             self.initiate_fetch_details()
 
+    def handle_fetch_details_response(
+            self,
+            item: models.System,
+            request_metadata: OacsRequestMetadata
+    ) -> None:
+        super().handle_fetch_details_response(item, request_metadata)
+        if self._layer_load_has_been_requested:
+            self._layer_load_has_been_requested = False
+            return self.initiate_layer_loading()
+
+
+class SystemListItemWidget(
+    OacsFeatureListItemWidgetBase,
+    ResourceListItemWidgetUi
+):
+
+    def __init__(
+            self,
+            item: models.System,
+            parent: QtWidgets.QWidget | None = None
+    ) -> None:
+        self.details_initiator = oacs_client.initiate_system_item_fetch
+        self.listen_to = oacs_client.system_item_fetched
+        super().__init__(item, parent)
+
+    def get_icon_path(self) -> str:
+        return (
+            self.item.feature_type.get_icon_path()
+            if self.item.feature_type
+            else models.IconPath.system_type_system
+        )
+
+    def get_icon_tooltip(self) -> str:
+        return (
+            self.item.feature_type.value.upper()
+            if self.item.feature_type
+            else models.SystemType.SYSTEM.value.upper()
+        )
+
+    def get_description(self) -> str:
+        return f"<p>{self.item.uid}</p>"
+
     def initiate_layer_loading(self) -> None:
         utils.load_oacs_feature_as_layer(self.item)
 
-    def initiate_fetch_details(self) -> None:
-        oacs_client.initiate_deployment_item_fetch(
-            self.item.id_,
-            settings_manager.get_current_data_source_connection()
-        )
 
-    def handle_fetch_details_response(
+class DeploymentListItemWidget(
+    OacsFeatureListItemWidgetBase,
+    ResourceListItemWidgetUi,
+):
+
+    def __init__(
             self,
             item: models.Deployment,
-            request_metadata: OacsRequestMetadata
-    ) -> None:
-        if self.item.id_ != item.id_:
-            return None
-        self.item = item
-        self._already_fetched_details = True
-
-        if self._layer_load_has_been_requested:
-            self._layer_load_has_been_requested = False
-            return self.initiate_layer_loading()
-
-        table_items = [
-            (QtWidgets.QTableWidgetItem(k), QtWidgets.QTableWidgetItem(v))
-            for k, v in self.item.get_renderable_properties().items()
-        ]
-        self.details_properties_tw.setColumnCount(2)
-        self.details_properties_tw.setRowCount(len(table_items))
-        self.details_properties_tw.setHorizontalHeaderLabels(["Property", "Value"])
-        self.details_properties_tw.horizontalHeader().setStretchLastSection(True)
-        self.details_properties_tw.verticalHeader().setVisible(False)
-        self.details_properties_tw.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.details_properties_tw.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        for row_index, (prop_name, prop_value) in enumerate(table_items):
-            self.details_properties_tw.setItem(row_index, 0, prop_name)
-            self.details_properties_tw.setItem(row_index, 1, prop_value)
-        self.details_properties_tw.resizeRowsToContents()
-        total_height = (
-                self.details_properties_tw.horizontalHeader().height() +
-                sum(self.details_properties_tw.rowHeight(i) for i in range(len(table_items))) +
-                2  # Small margin for borders
-        )
-        self.details_properties_tw.setMinimumHeight(total_height)
-        self.details_properties_tw.setMaximumHeight(total_height)
-
-        self.related_resources_widget = RelatedResourcesWidget(
-            links=self.item.get_relevant_links(),
-        )
-        self.details_frame.layout().addWidget(self.related_resources_widget)
-
-
-class SamplingFeatureListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
-    name_la: QtWidgets.QLabel
-    icon_la: QtWidgets.QLabel
-    description_la: QtWidgets.QLabel
-    load_pb: QtWidgets.QPushButton
-    details_pb: QtWidgets.QPushButton
-    details_frame: QtWidgets.QFrame
-    details_properties_tw: QtWidgets.QTableWidget
-    item: models.SamplingFeature
-
-    _already_fetched_details: bool
-    _layer_load_has_been_requested: bool
-
-    def __init__(
-            self,
-            item: models.SamplingFeature,
             parent: QtWidgets.QWidget | None = None
     ):
-        super().__init__(parent)
-        self.setupUi(self)
-        self.item = item
-        self.details_pb.setText("Details...")
-        self.load_pb.setIcon(
-            QtGui.QIcon(
-                IconPath.feature_has_geospatial_location
-                if self.item.geometry
-                else IconPath.feature_does_not_have_geospatial_location
-            )
-        )
-        self.details_frame.setVisible(False)
-        self._already_fetched_details = False
-        self._layer_load_has_been_requested = False
-        utils.set_up_icon(
-            self.icon_la,
-            icon_path=models.IconPath.sampling_feature,
-            tooltip=self.item.feature_type.upper()
-        )
-        self.name_la.setText(f"<h3>{self.item.name}</h3>")
-        self.name_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        description_contents = """
-            <p>{uid}</p>
-        """.format(
-            uid=self.item.uid,
-        )
-        self.description_la.setText(description_contents)
-        self.description_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        self.details_pb.clicked.connect(self.toggle_details)
-        self.load_pb.clicked.connect(self.load_as_layer)
-        oacs_client.sampling_feature_item_fetched.connect(
-            self.handle_fetch_details_response)
+        self.details_initiator = oacs_client.initiate_deployment_item_fetch
+        self.listen_to = oacs_client.deployment_item_fetched
+        super().__init__(item, parent)
 
-    def toggle_details(self) -> None:
-        if self.details_frame.isVisible():
-            self.details_frame.setVisible(False)
-            self.details_pb.setText("Details...")
-        else:
-            self.details_pb.setText("Hide details...")
-            self.details_frame.setVisible(True)
-            if not self._already_fetched_details:
-                log_message(f"About to fetch details from the server...")
-                self.initiate_fetch_details()
+    def get_icon_path(self) -> str:
+        return models.IconPath.deployment
 
-    def load_as_layer(self):
-        if self._already_fetched_details:
-            self.initiate_layer_loading()
-        else:
-            self._layer_load_has_been_requested = True
-            self.initiate_fetch_details()
+    def get_icon_tooltip(self) -> str:
+        return (
+            self.item.feature_type.upper()
+            if self.item.feature_type
+            else "DEPLOYMENT"
+        )
+
+    def get_description(self) -> str:
+        return f"<p>{self.item.uid}</p>"
 
     def initiate_layer_loading(self) -> None:
         utils.load_oacs_feature_as_layer(self.item)
 
-    def initiate_fetch_details(self) -> None:
-        oacs_client.initiate_sampling_feature_item_fetch(
-            self.item.id_,
-            settings_manager.get_current_data_source_connection()
-        )
 
-    def handle_fetch_details_response(
+class SamplingFeatureListItemWidget(
+    OacsFeatureListItemWidgetBase,
+    ResourceListItemWidgetUi,
+):
+
+    def __init__(
             self,
             item: models.SamplingFeature,
-            request_metadata: OacsRequestMetadata
-    ) -> None:
-        if self.item.id_ != item.id_:
-            return None
-        self.item = item
-        self._already_fetched_details = True
+            parent: QtWidgets.QWidget | None = None
+    ):
+        self.details_initiator = oacs_client.initiate_sampling_feature_item_fetch
+        self.listen_to = oacs_client.sampling_feature_item_fetched
+        super().__init__(item, parent)
 
-        if self._layer_load_has_been_requested:
-            self._layer_load_has_been_requested = False
-            return self.initiate_layer_loading()
+    def get_icon_path(self) -> str:
+        return models.IconPath.sampling_feature
 
-        table_items = [
-            (QtWidgets.QTableWidgetItem(k), QtWidgets.QTableWidgetItem(v))
-            for k, v in self.item.get_renderable_properties().items()
-        ]
-        self.details_properties_tw.setColumnCount(2)
-        self.details_properties_tw.setRowCount(len(table_items))
-        self.details_properties_tw.setHorizontalHeaderLabels(["Property", "Value"])
-        self.details_properties_tw.horizontalHeader().setStretchLastSection(True)
-        self.details_properties_tw.verticalHeader().setVisible(False)
-        self.details_properties_tw.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.details_properties_tw.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        for row_index, (prop_name, prop_value) in enumerate(table_items):
-            self.details_properties_tw.setItem(row_index, 0, prop_name)
-            self.details_properties_tw.setItem(row_index, 1, prop_value)
-        self.details_properties_tw.resizeRowsToContents()
-        total_height = (
-                self.details_properties_tw.horizontalHeader().height() +
-                sum(self.details_properties_tw.rowHeight(i) for i in range(len(table_items))) +
-                2  # Small margin for borders
+    def get_icon_tooltip(self) -> str:
+        return (
+            self.item.feature_type.upper()
+            if self.item.feature_type
+            else "SAMPLING_FEATURE"
         )
-        self.details_properties_tw.setMinimumHeight(total_height)
-        self.details_properties_tw.setMaximumHeight(total_height)
 
-        self.related_resources_widget = RelatedResourcesWidget(
-            links=self.item.get_relevant_links(),
-        )
-        self.details_frame.layout().addWidget(self.related_resources_widget)
+    def get_description(self) -> str:
+        return f"<p>{self.item.uid}</p>"
+
+    def initiate_layer_loading(self) -> None:
+        utils.load_oacs_feature_as_layer(self.item)
 
 
-class DataStreamListItemWidget(QtWidgets.QWidget, ResourceListItemWidgetUi):
-    name_la: QtWidgets.QLabel
-    icon_la: QtWidgets.QLabel
-    description_la: QtWidgets.QLabel
-    load_pb: QtWidgets.QPushButton
-    details_pb: QtWidgets.QPushButton
-    details_frame: QtWidgets.QFrame
-    details_properties_tw: QtWidgets.QTableWidget
-    item: models.DataStream
+class ProcedureListItemWidget(
+    OacsFeatureListItemWidgetBase,
+    ResourceListItemWidgetUi,
+):
 
-    _already_fetched_details: bool
+    def __init__(
+            self,
+            item: models.Procedure,
+            parent: QtWidgets.QWidget | None = None
+    ):
+        self.details_initiator = oacs_client.initiate_procedure_item_fetch
+        self.listen_to = oacs_client.procedure_item_fetched
+        super().__init__(item, parent)
+
+    def get_icon_path(self) -> str:
+        return models.IconPath.procedure_type_procedure
+
+    def get_icon_tooltip(self) -> str:
+        return self.item.feature_type.value.upper()
+
+    def get_description(self) -> str:
+        return f"<p>{self.item.uid}</p>"
+
+    def initiate_layer_loading(self) -> None:
+        utils.load_oacs_feature_as_layer(self.item)
+
+
+class DataStreamListItemWidget(
+    OacsItemListItemWidgetBase,
+    DatastreamListItemWidgetUi,
+):
 
     def __init__(
             self,
             item: models.DataStream,
             parent: QtWidgets.QWidget | None = None
     ):
-        super().__init__(parent)
-        self.setupUi(self)
-        self.details_pb.setText("Details...")
-        self.details_frame.setVisible(False)
-        self.item = item
-        self._already_fetched_details = False
-        utils.set_up_icon(
-            self.icon_la,
-            icon_path=(
-                self.item.datastream_type.get_icon_path()
-                if self.item.datastream_type
-                else models.IconPath.datastream
-            ),
-            tooltip=(
-                self.item.datastream_type.value.upper()
-                if self.item.datastream_type
-                else "DATASTREAM"
-            ),
-        )
-        self.name_la.setText(f"<h3>{self.item.name}</h3>")
-        self.name_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        description_contents = """
-            <p>{description}</p>
-        """.format(
-            description=self.item.description or "",
-        )
-        self.description_la.setText(description_contents)
-        self.description_la.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        self.details_pb.clicked.connect(self.toggle_details)
-        self.load_pb.clicked.connect(self.load_as_layer)
-        oacs_client.datastream_item_fetched.connect(self.handle_fetch_details_response)
+        self.details_initiator = oacs_client.initiate_datastream_item_fetch
+        self.listen_to = oacs_client.datastream_item_fetched
+        super().__init__(item, parent)
 
-    def toggle_details(self) -> None:
-        if self.details_frame.isVisible():
-            self.details_frame.setVisible(False)
-            self.details_pb.setText("Details...")
-        else:
-            self.details_pb.setText("Hide details...")
-            self.details_frame.setVisible(True)
-            if not self._already_fetched_details:
-                log_message(f"About to fetch details from the server...")
-                self.initiate_fetch_details()
-
-    def load_as_layer(self):
-        if self._already_fetched_details:
-            raise NotImplementedError
-        else:
-            raise NotImplementedError
-
-    def initiate_fetch_details(self) -> None:
-        oacs_client.initiate_datastream_item_fetch(
-            self.item.id_,
-            settings_manager.get_current_data_source_connection()
+    def get_icon_path(self) -> str:
+        return (
+            self.item.datastream_type.get_icon_path()
+            if self.item.datastream_type
+            else models.IconPath.datastream
         )
 
-    def handle_fetch_details_response(
-            self,
-            item: models.DataStream,
-            request_metadata: OacsRequestMetadata
-    ) -> None:
-        if self.item.id_ != item.id_:
-            return None
-        self.item = item
-        self._already_fetched_details = True
-        table_items = [
-            (QtWidgets.QTableWidgetItem(k), QtWidgets.QTableWidgetItem(v))
-            for k, v in self.item.get_renderable_properties().items()
-        ]
-        self.details_properties_tw.setColumnCount(2)
-        self.details_properties_tw.setRowCount(len(table_items))
-        self.details_properties_tw.setHorizontalHeaderLabels(["Property", "Value"])
-        self.details_properties_tw.horizontalHeader().setStretchLastSection(True)
-        self.details_properties_tw.verticalHeader().setVisible(False)
-        self.details_properties_tw.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.details_properties_tw.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        for row_index, (prop_name, prop_value) in enumerate(table_items):
-            self.details_properties_tw.setItem(row_index, 0, prop_name)
-            self.details_properties_tw.setItem(row_index, 1, prop_value)
-        self.details_properties_tw.resizeRowsToContents()
-        total_height = (
-                self.details_properties_tw.horizontalHeader().height() +
-                sum(self.details_properties_tw.rowHeight(i) for i in range(len(table_items))) +
-                2  # Small margin for borders
+    def get_icon_tooltip(self) -> str:
+        return (
+            self.item.datastream_type.value.upper()
+            if self.item.datastream_type
+            else "DATASTREAM"
         )
-        self.details_properties_tw.setMinimumHeight(total_height)
-        self.details_properties_tw.setMaximumHeight(total_height)
 
-        self.related_resources_widget = RelatedResourcesWidget(
-            links=self.item.get_relevant_links(),
-        )
-        self.details_frame.layout().addWidget(self.related_resources_widget)
+    def get_description(self) -> str:
+        return f"<p>{self.item.description or ''}</p>"
 
 
 class ExpandableSection(QtWidgets.QFrame):

@@ -84,6 +84,53 @@ class AssetType(enum.Enum):
         }.get(self, IconPath.system_asset_type_other)
 
 
+class ProcedureType(enum.Enum):
+    PROCEDURE = "procedure"
+    OBSERVING_PROCEDURE = "observing_procedure"
+    SAMPLING_PROCEDURE = "sampling_procedure"
+    ACTUATING_PROCEDURE = "actuating_procedure"
+    SYSTEM = "system"
+    SENSOR = "sensor"
+    ACTUATOR = "actuator"
+    SAMPLER = "sampler"
+    PLATFORM = "platform"
+
+    @classmethod
+    def from_api_response(cls, value: str) -> "ProcedureType":
+        return {
+            "http://www.w3.org/ns/sosa/Procedure": ProcedureType.PROCEDURE,
+            "http://www.w3.org/ns/sosa/ObservingProcedure": ProcedureType.OBSERVING_PROCEDURE,
+            "http://www.w3.org/ns/sosa/SamplingProcedure": ProcedureType.SAMPLING_PROCEDURE,
+            "http://www.w3.org/ns/sosa/ActuatingProcedure": ProcedureType.ACTUATING_PROCEDURE,
+            "http://www.w3.org/ns/sosa/System": ProcedureType.SYSTEM,
+            "http://www.w3.org/ns/sosa/Sensor": ProcedureType.SENSOR,
+            "http://www.w3.org/ns/sosa/Actuator": ProcedureType.ACTUATOR,
+            "http://www.w3.org/ns/sosa/Sampler": ProcedureType.SAMPLER,
+            "http://www.w3.org/ns/sosa/Platform": ProcedureType.PLATFORM,
+            "sosa:Procedure": ProcedureType.PROCEDURE,
+            "sosa:ObservingProcedure": ProcedureType.OBSERVING_PROCEDURE,
+            "sosa:SamplingProcedure": ProcedureType.SAMPLING_PROCEDURE,
+            "sosa:ActuatingProcedure": ProcedureType.ACTUATING_PROCEDURE,
+            "sosa:System": ProcedureType.SYSTEM,
+            "sosa:Sensor": ProcedureType.SENSOR,
+            "sosa:Actuator": ProcedureType.ACTUATOR,
+            "sosa:Sampler": ProcedureType.SAMPLER,
+            "sosa:Platform": ProcedureType.PLATFORM,
+        }[value]
+
+    def get_icon_path(self) -> str:
+        return {
+            self.PROCEDURE: IconPath.procedure_type_procedure,
+            self.OBSERVING_PROCEDURE: IconPath.procedure_type_procedure,
+            self.SAMPLING_PROCEDURE: IconPath.procedure_type_procedure,
+            self.SYSTEM: IconPath.procedure_type_procedure,
+            self.SENSOR: IconPath.procedure_type_procedure,
+            self.ACTUATOR: IconPath.procedure_type_procedure,
+            self.SAMPLER: IconPath.procedure_type_procedure,
+            self.PLATFORM: IconPath.procedure_type_procedure,
+        }.get(self, IconPath.procedure_type_procedure)
+
+
 @dataclasses.dataclass(frozen=True)
 class TimePeriod:
     start: typing.Literal["now"] | dt.datetime
@@ -101,6 +148,9 @@ class TimePeriod:
                 if (raw_end := value[1]) != "now" else raw_end
             ),
         )
+
+    def as_renderable_property(self) -> str:
+        return f"{self.start} to {self.end}"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -355,7 +405,7 @@ class System(OacsFeature):
             **super().get_renderable_properties(),
             "Feature Type": self.feature_type.name.upper(),
             "Asset Type": self.asset_type.name.upper() if self.asset_type else "Unknown",
-            "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
+            "Valid Time": self.valid_time.as_renderable_property() if self.valid_time else "Unknown",
         }
 
     def get_relevant_links(self) -> list[Link]:
@@ -423,7 +473,7 @@ class Deployment(OacsFeature):
         return {
             **super().get_renderable_properties(),
             "Feature Type": (self.feature_type or "deployment").upper(),
-            "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
+            "Valid Time": self.valid_time.as_renderable_property() if self.valid_time else "Unknown",
         }
 
     def get_relevant_links(self) -> list[Link]:
@@ -479,7 +529,7 @@ class SamplingFeature(OacsFeature):
         return {
             **super().get_renderable_properties(),
             "Feature Type": (self.feature_type or "sampling_feature").upper(),
-            "Valid Time": str(self.valid_time) if self.valid_time else "Unknown",
+            "Valid Time": self.valid_time.as_renderable_property() if self.valid_time else "Unknown",
         }
 
     def get_relevant_links(self) -> list[Link]:
@@ -499,6 +549,47 @@ class SamplingFeature(OacsFeature):
         #
         # https://github.com/opengeospatial/ogcapi-connected-systems/issues/173
         #
+        return [link for link in self.links if link.rel in relevant_link_rels]
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class Procedure(OacsFeature):
+    geometry: None
+    feature_type: ProcedureType
+    valid_time: TimePeriod
+
+    @classmethod
+    def from_api_response(cls, response_content: dict) -> "Procedure":
+        common = cls._parse_api_response(
+            response_content,
+            disregard_properties=("featureType", "validTime")
+        )
+        return cls(
+            **{
+                **common,
+                "feature_type": (
+                    ProcedureType.from_api_response(raw_type)
+                    if (raw_type := response_content["properties"].get("featureType", None))
+                    else ProcedureType.PROCEDURE
+                ),
+                "valid_time": (
+                    TimePeriod.from_api_response(raw_valid_time)
+                    if (raw_valid_time := response_content["properties"].get("validTime", None))
+                    else None
+                ),
+                "geometry": None
+            }
+        )
+
+    def get_renderable_properties(self) -> dict[str, str]:
+        return {
+            **super().get_renderable_properties(),
+            "Feature Type": self.feature_type.name.upper(),
+            "Valid Time": self.valid_time.as_renderable_property(),
+        }
+
+    def get_relevant_links(self) -> list[Link]:
+        relevant_link_rels = ()
         return [link for link in self.links if link.rel in relevant_link_rels]
 
 
@@ -660,6 +751,11 @@ class DeploymentList(OacsFeatureList):
 @dataclasses.dataclass(frozen=True)
 class SamplingFeatureList(OacsFeatureList):
     item_type = SamplingFeature
+
+
+@dataclasses.dataclass(frozen=True)
+class ProcedureList(OacsFeatureList):
+    item_type = Procedure
 
 
 @dataclasses.dataclass(frozen=True)

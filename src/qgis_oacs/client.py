@@ -22,6 +22,8 @@ class RequestType(enum.Enum):
     DATASTREAM_ITEM = "datastream-item"
     DEPLOYMENT_LIST = "deployment-list"
     DEPLOYMENT_ITEM = "deployment-item"
+    PROCEDURE_LIST = "procedure-list"
+    PROCEDURE_ITEM = "procedure-item"
     SAMPLING_FEATURE_LIST = "sampling-feature-list"
     SAMPLING_FEATURE_ITEM = "sampling-feature-item"
     SYSTEM_LIST = "system-list"
@@ -44,6 +46,8 @@ class OacsClient(QtCore.QObject):
     system_item_fetched = QtCore.pyqtSignal(models.System, OacsRequestMetadata)
     sampling_feature_list_fetched = QtCore.pyqtSignal(models.SamplingFeatureList, OacsRequestMetadata)
     sampling_feature_item_fetched = QtCore.pyqtSignal(models.SamplingFeature, OacsRequestMetadata)
+    procedure_list_fetched = QtCore.pyqtSignal(models.ProcedureList, OacsRequestMetadata)
+    procedure_item_fetched = QtCore.pyqtSignal(models.Procedure, OacsRequestMetadata)
     datastream_list_fetched = QtCore.pyqtSignal(models.DataStreamList, OacsRequestMetadata)
     datastream_item_fetched = QtCore.pyqtSignal(models.DataStream, OacsRequestMetadata)
 
@@ -103,6 +107,36 @@ class OacsClient(QtCore.QObject):
                 self.handle_network_response,
                 parser=models.DeploymentList.from_api_response,
                 to_emit=self.deployment_list_fetched,
+            )
+        )
+        self.request_started.emit(meta)
+        return meta
+
+    def initiate_procedure_list_search(
+            self,
+            connection: settings.DataSourceConnectionSettings,
+            q_filter: str | None = None
+    ) -> OacsRequestMetadata:
+        query = {
+            "f": "geojson" if connection.use_f_query_param else None,
+            "q": q_filter,
+        }
+        meta = OacsRequestMetadata(request_type=RequestType.PROCEDURE_LIST)
+        self.dispatch_network_request(
+            search_params=models.ClientSearchParams(
+                "/procedures",
+                query=(
+                    {k: v for k, v in query.items() if v is not None}
+                    if query else None
+                ),
+                headers={"Accept": "application/geo+json"},
+            ),
+            connection=connection,
+            task_metadata=meta,
+            response_handler=functools.partial(
+                self.handle_network_response,
+                parser=models.ProcedureList.from_api_response,
+                to_emit=self.procedure_list_fetched,
             )
         )
         self.request_started.emit(meta)
@@ -246,6 +280,32 @@ class OacsClient(QtCore.QObject):
         self.request_started.emit(meta)
         return meta
 
+    def initiate_procedure_item_fetch(
+            self,
+            procedure_id: str,
+            connection: settings.DataSourceConnectionSettings
+    ) -> OacsRequestMetadata:
+        query = {
+            "f": "geojson" if connection.use_f_query_param else None
+        }
+        meta = OacsRequestMetadata(request_type=RequestType.PROCEDURE_ITEM)
+        self.dispatch_network_request(
+            search_params=models.ClientSearchParams(
+                f"/procedures/{procedure_id}",
+                query={k: v for k, v in query.items()} if query else None,
+                headers={"Accept": "application/geo+json"},
+            ),
+            connection=connection,
+            task_metadata=meta,
+            response_handler=functools.partial(
+                self.handle_network_response,
+                parser=models.Procedure.from_api_response,
+                to_emit=self.procedure_item_fetched
+            )
+        )
+        self.request_started.emit(meta)
+        return meta
+
     def initiate_datastream_item_fetch(
             self,
             datastream_id: str,
@@ -354,7 +414,8 @@ class OacsClient(QtCore.QObject):
             return None
         try:
             if reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
-                http_status = reply.attribute(QtNetwork.QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+                http_status = reply.attribute(
+                    QtNetwork.QNetworkRequest.Attribute.HttpStatusCodeAttribute)
                 error_message = f"HTTP code {http_status}: {reply.errorString()}"
                 self.request_failed.emit(task_metadata, error_message)
                 log_message(f"Connection error {error_message!r}")

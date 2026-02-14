@@ -76,13 +76,6 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="load_pb">
-          <property name="text">
-           <string>Load</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QPushButton" name="details_pb">
           <property name="text">
            <string>Details</string>
