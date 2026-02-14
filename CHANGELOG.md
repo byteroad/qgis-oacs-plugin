@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add support for Procedure items
+
+### Fixed
+- Scroll bar resizes correctly when number of list items changes
+
 
 ## [0.0.4] - 2026-02-09
 
