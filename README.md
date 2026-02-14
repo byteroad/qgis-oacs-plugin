@@ -39,6 +39,7 @@ https://developers.google.com/fonts/docs/material_symbols#licensing
 
 List of Google material icons used:
 
+- [Article](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:article:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=doc&icon.size=24&icon.color=%231f1f1f)
 - [Circle](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:circle:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=circle&icon.size=24&icon.color=%231f1f1f)
 - [Deployed Code](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:deployed_code:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=deploy&icon.size=24&icon.color=%231f1f1f)
 - [Eye Tracking](https://fonts.google.com/icons?selected=Material+Symbols+Outlined:eye_tracking:FILL@0;wght@400;GRAD@0;opsz@24&icon.query=measurement&icon.size=24&icon.color=%231f1f1f)

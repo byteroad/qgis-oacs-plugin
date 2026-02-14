@@ -12,6 +12,7 @@ class IconPath:
     deployment = ":/plugins/qgis_oacs/deployed_code.svg"
     feature_has_geospatial_location = ":/plugins/qgis_oacs/location_on.svg"
     feature_does_not_have_geospatial_location = ":/plugins/qgis_oacs/table.svg"
+    procedure_type_procedure = ":/plugins/qgis_oacs/procedure.svg"
     system_type_sensor = ":/plugins/qgis_oacs/sensors_krx.svg"
     system_type_actuator = ":/plugins/qgis_oacs/stadia_controller.svg"
     system_type_platform = ":/plugins/qgis_oacs/tools_ladder.svg"
