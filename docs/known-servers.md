@@ -8,7 +8,7 @@ The following is a list of servers which are known to implement the OGC API - Co
 - https://csa.demo.52north.org/ - as of now, this server's TLS certificate is not valid, so one needs to skip TLS
   verification in order to use it.
 - https://api.georobotix.io/ogc/demo1/api/systems - the [opensensorhub docs] claim this is a good demo server
-  for OACS - seems to be down though (responds with HTTP 502)
+  for CSAPI - seems to be down though (responds with HTTP 502)
 - https://os4csapi-osh.duckdns.org/sensorhub/api - it contains tons of data for systems, deployments and other resources - it is protected by
   auth (credentials supplied offline)
 - 

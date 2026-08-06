@@ -10,7 +10,7 @@ from ..settings import settings_manager
 
 class ObservationsPanel(QtWidgets.QDockWidget):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
-        super().__init__("OACS Observations", parent)
+        super().__init__("CSAPI Observations", parent)
         self._datastream: models.DataStream | None = None
         self._pending_system_load_id: uuid.UUID | None = None
         self._build_ui()

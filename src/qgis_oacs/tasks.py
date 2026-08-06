@@ -23,7 +23,7 @@ class CollectionListNetworkRequestTask(qgis.core.QgsTask):
             self,
             network_request_timeout: int,
             authcfg_id: str | None = None,
-            description: str = "oacs-plugin-network-request-task",
+            description: str = "csapi-plugin-network-request-task",
     ):
         super().__init__(description)
         self.authcfg_id = authcfg_id

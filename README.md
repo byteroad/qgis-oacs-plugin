@@ -1,4 +1,4 @@
-# QGIS OACS Plugin
+# QGIS CSAPI Plugin
 
 Check out the docs at:
 
