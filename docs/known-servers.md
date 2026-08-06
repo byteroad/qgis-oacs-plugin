@@ -10,4 +10,9 @@ The following is a list of servers which are known to implement the OGC API - Co
 5. <https://os4csapi-osh.duckdns.org/sensorhub/api> - it contains tons of data for systems, deployments and other resources - it is protected by
   auth (credentials supplied offline).
 
+!!! NOTE
+
+    To work with servers 1, 2 and 5 you will need to enable the `f` parameter for content negotiation (Connection Configuration -> Advanced Settings).
+
+
   [opensensorhub docs]: https://docs.opensensorhub.org/docs/osh-connect/connected-systems#hands-on-guide-and-examples
