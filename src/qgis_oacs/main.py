@@ -43,10 +43,10 @@ class QgisOacs:
 
         self._toggle_action = QtWidgets.QAction(
             QtGui.QIcon(IconPath.main_logo),
-            "Toggle OACS plugin panel",
+            "Toggle CSAPI plugin panel",
             self.iface.mainWindow(),
         )
-        self._toggle_action.setToolTip("Toggle OACS plugin panel")
+        self._toggle_action.setToolTip("Toggle CSAPI plugin panel")
         self._toggle_action.setCheckable(True)
         self._toggle_action.setChecked(False)
         self._toggle_action.toggled.connect(self._resource_panel.setVisible)

@@ -28,7 +28,7 @@ class SystemType(enum.Enum):
 
     @classmethod
     def from_api_response(cls, value: str) -> "SystemType":
-        # OGC API-CS specifies SOSA types (sosa:), but some servers send SSN
+        # CSAPI specifies SOSA types (sosa:), but some servers send SSN
         # types (ssn:) instead. SSN and SOSA are closely aligned — ssn:System
         # is the parent of all SOSA system types — so we accept both.
         try:
@@ -120,7 +120,7 @@ class ProcedureType(enum.Enum):
                 "http://www.w3.org/ns/sosa/ObservingProcedure": ProcedureType.OBSERVING_PROCEDURE,
 
                 # this below `procedure/observation` type is not strictly conformant
-                # with the OGC API-CS document. However, some servers return it.
+                # with the CSAPI document. However, some servers return it.
                 # Seems likely that it comes from an older version of the standard, so
                 # we map it to ObservingProcedure
                 "http://www.opengis.net/def/procedure/observation": ProcedureType.OBSERVING_PROCEDURE,

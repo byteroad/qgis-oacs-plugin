@@ -1,7 +1,7 @@
 # User guide
 
-The QGIS OACS plugin allows you to browse through the resources exposed by servers that implement the 
-[OGC API - Connected Systems] (OACS) standard.
+The QGIS CSAPI plugin allows you to browse through the resources exposed by servers that implement the 
+[OGC API - Connected Systems] (CSAPI) standard.
 
 
 [OGC API - Connected Systems]: https://ogcapi.ogc.org/connectedsystems/
@@ -22,32 +22,32 @@ you can install it from our private repo, as mentioned in the callout below.
     1. Add this custom repository inside QGIS Plugin Manager
     1. Allow experimental plugins
     1. Refresh the list of available plugins
-    1. Search for a plugin named **OACS**
+    1. Search for a plugin named **CSAPI**
     1. Install it!
 
 
 ## Overview
 
-QGIS OACS plugin has the following components:
+QGIS CSAPI plugin has the following components:
 
-- A QGIS data source selector - this allows configuring connections to OACS servers, 
+- A QGIS data source selector - this allows configuring connections to CSAPI servers, 
   discovering resources and loading them onto QGIS
-- A panel that shows currently loaded OACS resources and allows browsing their connected resources for further 
+- A panel that shows currently loaded CSAPI resources and allows browsing their connected resources for further 
   inspection and loading
 - A panel for visualizing observation results
 
 
-## OACS Data source selector
+## CSAPI Data source selector
 
 The Data source selector is where you configure connections and load resources onto the QGIS map canvas.
 Open it from the QGIS Data Source Manager, or via **Plugins → OGC API Connected Systems → Open data source selector**.
 
-![QGIS OACS plugin data source selector](images/data-source-selector.png)
+![QGIS CSAPI plugin data source selector](images/data-source-selector.png)
 
 
 ### Managing connections
 
-Use the connection bar at the top to create, edit, or remove connections to OACS servers. Each connection
+Use the connection bar at the top to create, edit, or remove connections to CSAPI servers. Each connection
 stores the server URL, an optional name, and authentication settings.
 
 
@@ -76,13 +76,13 @@ In each tab:
     Resources that have a spatial location have their icon colorized in green 
 
 
-## OACS resources panel
+## CSAPI resources panel
 
-The OACS Resources panel is a dockable panel that tracks every OACS resource you have loaded onto the
+The CSAPI Resources panel is a dockable panel that tracks every CSAPI resource you have loaded onto the
 map canvas. It lets you explore related resources without reopening the data source selector.
-It can be shown/hidden by pressing the QGIS OACS button shown in the QGIS toolbar.
+It can be shown/hidden by pressing the QGIS CSAPI button shown in the QGIS toolbar.
 
-![QGIS OACS plugin resource panel](images/oacs-panel.png)
+![QGIS CSAPI plugin resource panel](images/oacs-panel.png)
 
 The panel shows a tree, which is organized as:
 
@@ -105,9 +105,9 @@ To load a related resource onto the map, select it and use the **Add to map** bu
     Resources that have a spatial location have their icon colorized in green 
 
 
-## OACS observations panel
+## CSAPI observations panel
 
-The OACS Observations panel displays raw observation results for a datastream. It appears automatically
+The CSAPI Observations panel displays raw observation results for a datastream. It appears automatically
 when observation data is retrieved.
 
 The panel shows:
@@ -115,7 +115,7 @@ The panel shows:
 - The name of the datastream whose observations are being displayed.
 - The observation payloads as plain text, pretty-printed if the content is JSON.
 
-![QGIS OACS plugin observations panel](images/observations-panel.png)
+![QGIS CSAPI plugin observations panel](images/observations-panel.png)
 
 Two actions are available:
 

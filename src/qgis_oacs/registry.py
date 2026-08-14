@@ -67,12 +67,12 @@ def _parse_layer(layer: qgis.core.QgsMapLayer) -> OacsLayerEntry | None:
             links=[models.Link(**lnk) for lnk in raw_links],
         )
     except Exception as err:
-        log_message(f"Could not parse OACS layer properties from {layer.name()!r}: {err}")
+        log_message(f"Could not parse CSAPI layer properties from {layer.name()!r}: {err}")
         return None
 
 
 class OacsLayerRegistry(QtCore.QObject):
-    """Tracks QGIS layers that were loaded from an OACS resource."""
+    """Tracks QGIS layers that were loaded from a CSAPI resource."""
 
     registry_changed = QtCore.pyqtSignal()
 

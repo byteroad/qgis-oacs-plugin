@@ -1,6 +1,6 @@
 # Third-party resources
 
-The QGIS OACS Plugin makes use of some third-party works. All credit goes to original authors, 
+The QGIS CSAPI Plugin makes use of some third-party works. All credit goes to original authors, 
 and thanks for making awesome stuff that can be used by other projects!
 
 
