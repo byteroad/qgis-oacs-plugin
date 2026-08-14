@@ -1,4 +1,4 @@
-site_name: QGIS OACS plugin
+site_name: QGIS CSAPI plugin
 site_url: https://byteroad.github.io/qgis-oacs-plugin
 repo_url: https://github.com/byteroad/qgis-oacs-plugin
 
@@ -9,7 +9,7 @@ nav:
   - Changelog: "changelog-base.md"
   - QGIS Repo: "repo/plugins.xml"
   - Third-party credits: "third-party.md"
-  - Known OACS servers: "known-servers.md"
+  - Known CSAPI servers: "known-servers.md"
 
 theme:
   name: material

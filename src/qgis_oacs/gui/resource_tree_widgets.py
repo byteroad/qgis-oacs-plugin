@@ -1,4 +1,4 @@
-"""Generic tree-based browser widgets for OACS resources.
+"""Generic tree-based browser widgets for CSAPI resources.
 
 Each concrete class pairs with one resource type. The shared infrastructure
 lives in OacsResourceTreeWidgetBase; subclasses only implement the three
@@ -49,7 +49,7 @@ class OacsResourceTreeWidgetBase(
     QtWidgets.QWidget,
     metaclass=AbstractQWidgetMeta,
 ):
-    """Abstract master-detail tree browser for a single OACS resource type.
+    """Abstract master-detail tree browser for a single CSAPI resource type.
 
     Subclasses implement three hooks:
       _connect_type_signals  — wire up the resource-specific client signals

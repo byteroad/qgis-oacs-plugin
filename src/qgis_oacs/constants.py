@@ -6,7 +6,7 @@ SPATIAL_COLOR = QtGui.QColor("#2a9d8f")
 
 
 # ---------------------------------------------------------------------------
-# OACS layer custom property keys
+# CSAPI layer custom property keys
 # ---------------------------------------------------------------------------
 
 OACS_SCHEMA_VERSION_KEY = "oacs/schema_version"

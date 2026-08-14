@@ -146,7 +146,7 @@ def set_oacs_layer_properties(
         connection: "DataSourceConnectionSettings",
         resource: "models.OacsItem",
 ) -> None:
-    """Write OACS context onto a QGIS layer's custom properties."""
+    """Write CSAPI context onto a QGIS layer's custom properties."""
     self_link = resource.get_detail_url(connection.base_url)
     layer.setCustomProperty(OACS_SCHEMA_VERSION_KEY, OACS_SCHEMA_VERSION)
     layer.setCustomProperty(OACS_CONNECTION_ID_KEY, str(connection.id))

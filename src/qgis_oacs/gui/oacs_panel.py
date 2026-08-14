@@ -1,4 +1,4 @@
-"""Dockable panel for navigating loaded OACS resources and their associations."""
+"""Dockable panel for navigating loaded CSAPI resources and their associations."""
 
 import uuid
 
@@ -49,7 +49,7 @@ def _connection_label(conn_id: uuid.UUID, fallback_url: str) -> str:
 
 
 class OacsResourcePanel(QtWidgets.QDockWidget):
-    """Dockable panel showing OACS resources loaded on the canvas.
+    """Dockable panel showing CSAPI resources loaded on the canvas.
 
     Three tree levels:
       Connection → Loaded resource → Link-rel groups → Browsed related resources
@@ -60,7 +60,7 @@ class OacsResourcePanel(QtWidgets.QDockWidget):
             iface: qgis.gui.QgisInterface,
             parent: QtWidgets.QWidget | None = None,
     ) -> None:
-        super().__init__("OACS Resources", parent)
+        super().__init__("CSAPI Resources", parent)
         self._iface = iface
         self._pending_link_requests: dict[uuid.UUID, QtWidgets.QTreeWidgetItem] = {}
         self._pending_detail_requests: dict[uuid.UUID, QtWidgets.QTreeWidgetItem] = {}
@@ -124,7 +124,7 @@ class OacsResourcePanel(QtWidgets.QDockWidget):
         entries_by_conn = layer_registry.entries_by_connection()
         if not entries_by_conn:
             placeholder = QtWidgets.QTreeWidgetItem(
-                ["No OACS resources loaded", ""], _PLACEHOLDER_TYPE)
+                ["No CSAPI resources loaded", ""], _PLACEHOLDER_TYPE)
             placeholder.setFlags(placeholder.flags() & ~QtCore.Qt.ItemIsSelectable)
             self._tree.addTopLevelItem(placeholder)
             return

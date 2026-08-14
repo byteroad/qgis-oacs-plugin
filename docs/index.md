@@ -1,4 +1,4 @@
-# QGIS OACS Plugin
+# QGIS CSAPI Plugin
 
 ![Inspirational screenshot](images/qgis-oacs-motivational.png)
 
@@ -20,7 +20,7 @@ A [QGIS] plugin for working with [OGC API - Connected Systems] servers
 
 ---
 
-This is a QGIS plugin to work with OACS servers. It allows you to discover and visualize datasets exposed as OCS
+This is a QGIS plugin to work with CSAPI servers. It allows you to discover and visualize datasets exposed as OCS
 resources.
 
 ## Installation
@@ -40,7 +40,7 @@ the callout below.
     1. Add this custom repository inside QGIS Plugin Manager
     1. Allow experimental plugins
     1. Refresh the list of available plugins
-    1. Search for a plugin named **OACS**
+    1. Search for a plugin named **CSAPI**
     1. Install it!
 
 Proceed to the [User guide](user-guide.md) section for next steps.

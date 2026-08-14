@@ -175,7 +175,7 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
         message = f"Remove connection {connection_name!r}?"
         confirmation = QtWidgets.QMessageBox.warning(
             self,
-            "QGIS OACS Plugin",
+            "QGIS CSAPI Plugin",
             message,
             QtWidgets.QMessageBox.Yes,
             QtWidgets.QMessageBox.No,

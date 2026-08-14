@@ -1,4 +1,4 @@
-"""Shared detail panel widget for displaying OACS resource metadata."""
+"""Shared detail panel widget for displaying CSAPI resource metadata."""
 
 import typing
 
@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
 class ResourceDetailPanel(QtWidgets.QWidget):
     """Shows metadata and actions for the currently selected tree node.
 
-    Used both by the data source selector tree widgets and the OACS resource
+    Used both by the data source selector tree widgets and the CSAPI resource
     panel. Pass a ``connection`` explicitly when the active connection may
     differ from ``settings_manager.get_current_data_source_connection()``
     (e.g. in the panel where each entry has its own connection).
