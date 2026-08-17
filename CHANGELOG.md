@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-08-17
+
+### Fixed
+- Replaced naming "OACS" to "CSAPI"
+- Cleaned Up Known Server Recommendations on Docs
 
 ## [0.2.0] - 2026-05-18
 
