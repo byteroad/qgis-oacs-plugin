@@ -42,16 +42,15 @@ jobs:
           echo "::set-output name=IS_EXPERIMENTAL::$(uv run python -c "from pathlib import Path; import tomllib; data=tomllib.loads(Path('pyproject.toml').read_text()); print(data['tool']['qgis-plugin']['metadata']['experimental'].lower())")"
 
       - name: create release from tag
-        id: create-release
-        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: |
-            ${{ steps.get-zip-details.outputs.ZIP_PATH }}
-          tag_name: ${{ github.ref_name }}
-          prerelease: ${{ steps.get-experimental.outputs.IS_EXPERIMENTAL }}
-          draft: false
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            "${{ steps.get-zip-details.outputs.ZIP_PATH }}" \
+            --draft \
+            --prerelease=${{ steps.get-experimental.outputs.IS_EXPERIMENTAL }} \
+            --generate-notes
+          gh release edit "${{ github.ref_name }}" --draft=false
 
   update-docs:
     needs: create-release
