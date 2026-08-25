@@ -9,6 +9,7 @@ from qgis.PyQt import (
     QtWidgets,
 )
 from qgis.PyQt.uic import loadUiType
+from qgis.utils import iface
 
 from .. import utils
 from ..client import (
@@ -99,15 +100,18 @@ class OacsDataSourceWidget(qgis.gui.QgsAbstractDataSourceWidget, DataSourceWidge
         self.handle_current_connection_changed()
 
     def spawn_data_source_connection_dialog(self, add_new: bool):
+        qgis_main_window = iface.mainWindow()
         if add_new:
-            dialog = DataSourceConnectionDialog(parent=self)
+            dialog = DataSourceConnectionDialog(parent=qgis_main_window)
         else:
             dialog = DataSourceConnectionDialog(
-                parent=self,
+                parent=qgis_main_window,
                 data_source_connection=settings_manager.get_current_data_source_connection(),
             )
+
         dialog.exec_()
         self.update_connections_combobox()
+
 
     def update_current_data_source_connection(self, index: int) -> None:
         """Updates the current data source connection in the QGIS settings."""

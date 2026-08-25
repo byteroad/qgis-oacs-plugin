@@ -42,7 +42,7 @@ class DataSourceConnectionDialog(QtWidgets.QDialog, DialogUi):
             parent: QtWidgets.QWidget | None = None,
             data_source_connection: DataSourceConnectionSettings | None = None
     ):
-        super().__init__()
+        super().__init__(parent)
         self.setupUi(self)
         self.use_f_query_param_cb.setToolTip(
             "Whether to include the `f` query parameter set to the desired response "
